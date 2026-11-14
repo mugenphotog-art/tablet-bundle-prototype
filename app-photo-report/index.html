@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>写真報告書</title>
+<meta name="theme-color" content="#1565c0">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+  /* タブレット（指操作）向け：押しやすい大きさにする */
+  @media (pointer:coarse){
+    .btn{padding:13px 20px;font-size:16px;min-height:48px;}
+    .btn.small{padding:10px 12px;font-size:14px;min-height:44px;}
+    input[type=text],input[type=date],textarea,select{font-size:16px;padding:11px 12px;}
+    label{font-size:13px;}
+  }
+  @media (max-width:760px){
+    .grid-form{grid-template-columns:1fr;}
+    .photo-item{grid-template-columns:1fr;}
+    .photo-item .order{flex-direction:row;flex-wrap:wrap;}
+  }
+  .draft-note{font-size:12px;color:var(--muted);margin-left:auto;}
+  :root{
+    --blue:#1565c0;
+    --blue-d:#0d47a1;
+    --line:#d0d7de;
+    --bg:#f4f6f8;
+    --text:#1f2328;
+    --muted:#6b7280;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Segoe UI","Hiragino Kaku Gothic ProN","Meiryo",sans-serif;
+    color:var(--text);
+    background:var(--bg);
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+
+  /* ===== 操作画面（画面のみ） ===== */
+  .editor{max-width:1080px;margin:0 auto;padding:20px 24px 80px;}
+  .app-title{
+    display:flex;align-items:center;gap:10px;
+    font-size:22px;font-weight:700;color:var(--blue-d);
+    border-bottom:3px solid var(--blue);padding-bottom:12px;margin-bottom:18px;
+  }
+  .app-title small{font-size:13px;font-weight:400;color:var(--muted);}
+
+  .card{
+    background:#fff;border:1px solid var(--line);border-radius:10px;
+    padding:18px 20px;margin-bottom:18px;
+  }
+  .card h2{font-size:15px;margin:0 0 14px;color:var(--blue-d);
+    display:flex;align-items:center;gap:8px;}
+  .card h2 .num{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:22px;height:22px;border-radius:50%;background:var(--blue);color:#fff;
+    font-size:13px;
+  }
+
+  .grid-form{display:grid;grid-template-columns:repeat(2,1fr);gap:12px 18px;}
+  .field{display:flex;flex-direction:column;gap:4px;}
+  .field.full{grid-column:1 / -1;}
+  label{font-size:12px;color:var(--muted);font-weight:600;}
+  input[type=text],input[type=date],textarea,select{
+    border:1px solid var(--line);border-radius:6px;padding:7px 9px;
+    font-size:13px;font-family:inherit;width:100%;background:#fff;
+  }
+  input:focus,textarea:focus,select:focus{outline:2px solid #90caf9;border-color:var(--blue);}
+  textarea{resize:vertical;min-height:38px;}
+
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
+  .btn{
+    border:1px solid var(--blue);background:var(--blue);color:#fff;
+    padding:9px 16px;border-radius:7px;font-size:13px;font-weight:600;
+    cursor:pointer;font-family:inherit;
+  }
+  .btn:hover{background:var(--blue-d);}
+  .btn.ghost{background:#fff;color:var(--blue);}
+  .btn.ghost:hover{background:#eef4fc;}
+  .btn.danger{border-color:#d32f2f;color:#d32f2f;background:#fff;}
+  .btn.danger:hover{background:#fdecea;}
+  .btn.small{padding:4px 9px;font-size:12px;}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+
+  .dropzone{
+    border:2px dashed var(--line);border-radius:10px;padding:26px;text-align:center;
+    color:var(--muted);background:#fafbfc;cursor:pointer;transition:.15s;
+  }
+  .dropzone.over{border-color:var(--blue);background:#eef4fc;color:var(--blue-d);}
+  .dropzone strong{color:var(--text);}
+
+  .photo-list{display:flex;flex-direction:column;gap:12px;margin-top:16px;}
+  .photo-item{
+    display:grid;grid-template-columns:140px 1fr auto;gap:14px;
+    border:1px solid var(--line);border-radius:8px;padding:12px;background:#fff;
+  }
+  .photo-item .thumb{
+    width:140px;height:105px;object-fit:cover;border-radius:6px;background:#eee;border:1px solid var(--line);
+  }
+  .photo-item .meta{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 14px;align-content:start;}
+  .photo-item .meta .full{grid-column:1 / -1;}
+  .photo-item .order{display:flex;flex-direction:column;gap:6px;justify-content:flex-start;}
+  .idx-badge{
+    font-size:12px;color:var(--muted);text-align:center;margin-bottom:2px;font-weight:700;
+  }
+
+  .settings-row{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-end;}
+  .settings-row .field{min-width:150px;}
+
+  .rule-check{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text);font-weight:400;}
+  .ts-note{font-size:10px;color:var(--muted);text-align:center;margin-top:4px;line-height:1.35;}
+  .ts-note.warn{color:#c25708;}
+
+  .hint{font-size:12px;color:var(--muted);margin:6px 0 0;}
+  .count-badge{font-size:13px;color:var(--muted);font-weight:600;margin-left:auto;}
+
+  /* ===== 印刷プレビュー（報告書本体） ===== */
+  .report{display:none;}
+  .report-page{
+    background:#fff;
+    width:210mm;min-height:297mm;
+    margin:0 auto 16px;
+    padding:15mm 14mm 18mm;
+    border:1px solid var(--line);
+    position:relative;
+  }
+  .rep-header{
+    border-bottom:2px solid var(--blue);padding-bottom:8px;margin-bottom:10px;
+  }
+  .rep-header .rep-title{font-size:19px;font-weight:700;color:var(--blue-d);text-align:center;letter-spacing:2px;}
+  .rep-header .rep-sub{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 18px;margin-top:8px;font-size:12px;}
+  .rep-header .rep-sub div{white-space:nowrap;}
+  .rep-header .rep-sub b{color:#000;}
+
+  /* 写真情報の枠は写真サイズに関わらず常に固定。グリッドの高さ・行列・情報枠高さはJSで指定 */
+  .rep-grid{display:grid;align-items:stretch;}
+
+  .rep-cell{border:1px solid #bbb;border-radius:4px;overflow:hidden;display:flex;flex-direction:column;height:100%;break-inside:avoid;page-break-inside:avoid;}
+  .rep-cell .img-wrap{flex:1 1 auto;min-height:0;width:100%;background:#f0f0f0;overflow:hidden;line-height:0;}
+  .rep-cell img{width:100%;height:100%;object-fit:contain;display:block;}
+  .rep-caption{flex:0 0 auto;height:var(--capH,26mm);box-sizing:border-box;padding:5px 7px;font-size:11px;line-height:1.45;border-top:1px solid #ddd;overflow:hidden;}
+  .rep-cell.c3 .rep-caption{font-size:9.5px;padding:4px 5px;}
+  .rep-caption .row{display:flex;gap:5px;}
+  .rep-caption .row .lbl{color:#1565c0;font-weight:700;flex-shrink:0;}
+  .rep-caption .row .val{word-break:break-word;}
+  .rep-caption .comment{margin-top:2px;color:#333;}
+
+  .rep-footer{position:absolute;bottom:9mm;left:14mm;right:14mm;
+    display:flex;justify-content:space-between;font-size:10px;color:#888;border-top:1px solid #ddd;padding-top:4px;}
+
+  .preview-bar{
+    position:sticky;top:0;z-index:20;background:#fff;border:1px solid var(--line);
+    border-radius:10px;padding:12px 16px;margin-bottom:18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  }
+
+  @media screen{
+    body.preview-mode .editor{display:none;}
+    body.preview-mode .report{display:block;padding:20px 0 60px;}
+  }
+
+  /* ===== 実印刷 ===== */
+  @media print{
+    @page{size:A4;margin:0;}
+    body{background:#fff;}
+    .editor,.preview-bar,.no-print{display:none !important;}
+    .report{display:block !important;}
+    .report-page{
+      width:210mm;height:297mm;min-height:297mm;margin:0;border:none;overflow:hidden;
+      padding:15mm 14mm 18mm;page-break-after:always;break-inside:avoid;
+    }
+    .report-page:last-child{page-break-after:auto;}
+    .rep-grid{break-inside:avoid;page-break-inside:avoid;}
+    .rep-cell{break-inside:avoid;page-break-inside:avoid;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== 操作画面 ===================== -->
+<div class="editor">
+  <div class="app-title">
+    📷 写真報告書
+    <small>写真を取り込み → 情報を入力 → PDF出力（印刷でPDF保存）</small>
+    <span class="draft-note" id="draftNote"></span>
+  </div>
+
+  <!-- 案件情報 -->
+  <div class="card">
+    <h2><span class="num">1</span>案件情報（報告書のヘッダーに表示）</h2>
+    <div class="grid-form">
+      <div class="field">
+        <label>報告書タイトル</label>
+        <select id="repTitleSelect">
+          <option value="施工写真報告書">施工写真報告書</option>
+          <option value="修繕報告書">修繕報告書</option>
+          <option value="定期清掃報告書">定期清掃報告書</option>
+          <option value="現況調査報告書">現況調査報告書</option>
+          <option value="__custom__">直接入力…</option>
+        </select>
+        <input type="text" id="repTitleCustom" placeholder="報告書タイトルを入力" style="display:none;margin-top:6px;">
+      </div>
+      <div class="field"><label>報告日</label><input type="date" id="repDate"></div>
+      <div class="field"><label>物件名</label><input type="text" id="propName" placeholder="例）○○マンション 301号室"></div>
+      <div class="field"><label>会社名（作成者）</label><input type="text" id="company" placeholder="例）○○工務店"></div>
+      <div class="field full"><label>工事概要・備考（任意）</label><textarea id="summary" placeholder="例）外壁塗装一式、防水工事。○月○日〜○月○日 施工。"></textarea></div>
+    </div>
+  </div>
+
+  <!-- 写真取り込み -->
+  <div class="card">
+    <h2><span class="num">2</span>施工写真を取り込む</h2>
+    <div class="dropzone" id="dropzone">
+      <p style="margin:0 0 8px;font-size:15px;"><strong>ここに写真をドラッグ＆ドロップ</strong></p>
+      <p style="margin:0 0 12px;">または</p>
+      <button class="btn" type="button" id="camBtn">📷 カメラで撮影</button>
+      <button class="btn ghost" type="button" id="pickBtn">ファイルを選択（複数可）</button>
+      <input type="file" id="fileInput" accept="image/*" multiple hidden>
+      <input type="file" id="camInput" accept="image/*" capture="environment" hidden>
+      <p class="hint">JPEG / PNG など。撮影日は写真のEXIF（撮影日時）から自動取得します。EXIFが無い場合はファイルの更新日を初期値にします（後から変更可）。</p>
+    </div>
+  </div>
+
+  <!-- レイアウト設定 -->
+  <div class="card">
+    <h2><span class="num">3</span>レイアウト設定</h2>
+    <div class="settings-row">
+      <div class="field">
+        <label>1ページの写真枚数（グリッド）</label>
+        <select id="layout">
+          <option value="2x2">2 × 2（1ページ4枚／推奨）</option>
+          <option value="2x3">2 × 3（1ページ6枚）</option>
+          <option value="3x3">3 × 3（1ページ9枚）</option>
+          <option value="1x2">1 × 2（大きめ・1ページ2枚）</option>
+        </select>
+      </div>
+      <div class="field" style="min-width:260px;">
+        <label>並び順ルール</label>
+        <label class="rule-check">
+          <input type="checkbox" id="strictOrder" checked>
+          撮影日時の古い順を厳守（1番＝最古／常に自動整列）
+        </label>
+      </div>
+      <button class="btn ghost small" type="button" id="sortNowBtn">日時順に並べ替え</button>
+      <span class="count-badge" id="countBadge">写真 0 枚</span>
+    </div>
+    <p class="hint" id="ruleHint"></p>
+  </div>
+
+  <!-- 写真リスト -->
+  <div class="card">
+    <h2><span class="num">4</span>各写真の情報を入力・並び替え</h2>
+    <div class="photo-list" id="photoList"></div>
+    <p class="hint" id="emptyHint">まだ写真がありません。上の枠から取り込んでください。</p>
+  </div>
+
+  <!-- アクション -->
+  <div class="card">
+    <h2><span class="num">5</span>報告書を出力</h2>
+    <div class="toolbar">
+      <button class="btn" id="previewBtn">プレビュー表示</button>
+      <button class="btn ghost" id="printBtn">印刷 / PDF保存</button>
+      <button class="btn danger" id="newBtn" type="button">新しい報告書を始める</button>
+      <span class="hint" style="margin:0;">印刷ダイアログで「送信先＝PDFに保存」を選ぶとPDFが作れます。</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 報告書プレビュー ===================== -->
+<div class="report">
+  <div class="preview-bar no-print">
+    <button class="btn ghost" id="backBtn">← 編集に戻る</button>
+    <button class="btn" id="printBtn2">印刷 / PDF保存</button>
+    <span class="hint" style="margin:0;">このプレビューがそのままPDFになります（A4）。</span>
+  </div>
+  <div id="reportPages"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---- 状態 ----
+  var photos = []; // {id, seq, name, url, date, ts, tsSource, place, work, comment}
+  var nextId = 1;
+  var seqCounter = 0; // 取り込み順（同一日時のタイブレークに使用）
+
+  var $ = function(id){ return document.getElementById(id); };
+
+  // 報告日の初期値＝今日
+  (function(){
+    var d = new Date();
+    var s = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+    $("repDate").value = s;
+  })();
+
+  function fileDateToInput(ms){
+    var d = new Date(ms);
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  }
+
+  // "YYYY:MM:DD HH:MM:SS"（時刻欠落も可）＋サブ秒 → {date:"YYYY-MM-DD", ts:ミリ秒}
+  function parseExifDateTime(raw, subsec){
+    var ts = NaN, date = null;
+    var m = /^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/.exec(raw);
+    if(m){
+      var ms = 0;
+      if(subsec){
+        ms = Math.round(parseFloat("0." + subsec) * 1000);
+        if(!isFinite(ms) || ms < 0) ms = 0;
+        if(ms > 999) ms = 999;
+      }
+      date = m[1]+"-"+m[2]+"-"+m[3];
+      ts = new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6], ms).getTime();
+    }else{
+      var d = /^(\d{4}):(\d{2}):(\d{2})/.exec(raw);
+      if(!d) return null;
+      date = d[1]+"-"+d[2]+"-"+d[3];
+      ts = new Date(+d[1], +d[2]-1, +d[3]).getTime();
+    }
+    if(!isFinite(ts)) return null;   // 不正な日時は採用しない（並び順を壊さない）
+    return { date: date, ts: ts };
+  }
+
+  // ---- EXIF撮影日時の読み取り（JPEGのみ。ライブラリ不要の最小実装） ----
+  function getExifDateTime(arrayBuffer){
+    var view = new DataView(arrayBuffer);
+    if(view.byteLength < 4 || view.getUint16(0) !== 0xFFD8) return null; // JPEGでなければ対象外
+    var offset = 2, len = view.byteLength;
+    while(offset + 4 <= len){
+      var marker = view.getUint16(offset);
+      if((marker & 0xFF00) !== 0xFF00) break;              // マーカーが壊れている
+      if(marker === 0xFFDA || marker === 0xFFD9) break;    // 画像データ以降にEXIFは無い
+      var segLen = view.getUint16(offset + 2);
+      if(segLen < 2) break;
+      if(marker === 0xFFE1){                               // APP1（Exif格納セグメント）
+        var r = parseExif(view, offset + 4);
+        if(r) return r;                                    // APP1が複数あっても最初の有効なものを採用
+      }
+      offset += 2 + segLen;
+    }
+    return null;
+  }
+
+  function parseExif(view, start){
+    if(start + 8 > view.byteLength) return null;
+    if(view.getUint32(start) !== 0x45786966) return null; // "Exif"
+    var tiff = start + 6;
+    var little;
+    var bo = view.getUint16(tiff);
+    if(bo === 0x4949) little = true;
+    else if(bo === 0x4D4D) little = false;
+    else return null;
+    if(view.getUint16(tiff + 2, little) !== 0x002A) return null;
+
+    var ifd0 = tiff + view.getUint32(tiff + 4, little);
+    var entries0 = readIFD(view, ifd0, little);
+
+    var dateEntry = null, subsecEntry = null, source = "";
+    // Exifサブ IFD（撮影日時 DateTimeOriginal を最優先。サブ秒も取得して同秒撮影を判別）
+    if(entries0[0x8769]){
+      var exifIFD = tiff + view.getUint32(entries0[0x8769] + 8, little);
+      var entriesE = readIFD(view, exifIFD, little);
+      if(entriesE[0x9003]){ dateEntry = entriesE[0x9003]; subsecEntry = entriesE[0x9291]; source = "EXIF撮影日時"; }
+      else if(entriesE[0x9004]){ dateEntry = entriesE[0x9004]; subsecEntry = entriesE[0x9292]; source = "EXIFデジタル化日時"; }
+    }
+    // フォールバック：IFD0 の DateTime（ファイル変更日時）
+    if(!dateEntry && entries0[0x0132]){ dateEntry = entries0[0x0132]; source = "EXIF更新日時"; }
+    if(!dateEntry) return null;
+
+    var raw = readAscii(view, dateEntry, tiff, little);     // "YYYY:MM:DD HH:MM:SS"
+    if(!/^\d{4}:\d{2}:\d{2}/.test(raw)) return null;
+    var subsec = subsecEntry ? readAscii(view, subsecEntry, tiff, little).replace(/\D/g, "") : "";
+    return { raw: raw, subsec: subsec, source: source };
+  }
+
+  function readIFD(view, dirStart, little){
+    var map = {};
+    if(dirStart + 2 > view.byteLength) return map;
+    var n = view.getUint16(dirStart, little);
+    for(var i = 0; i < n; i++){
+      var e = dirStart + 2 + i * 12;
+      if(e + 12 > view.byteLength) break;
+      map[view.getUint16(e, little)] = e;
+    }
+    return map;
+  }
+
+  function readAscii(view, entryOffset, tiff, little){
+    var count = view.getUint32(entryOffset + 4, little);
+    var valueOffset = tiff + view.getUint32(entryOffset + 8, little);
+    var s = "";
+    for(var i = 0; i < count - 1 && valueOffset + i < view.byteLength; i++){
+      s += String.fromCharCode(view.getUint8(valueOffset + i));
+    }
+    return s;
+  }
+
+  // ================= 並び順ルール（撮影日時の古い順・1番＝最古） =================
+  function isStrictOrder(){ return $("strictOrder").checked; }
+
+  // 完全に決定的な比較：日時 → 日付 → ファイル名の自然順 → 取り込み順
+  // （同値でも必ず一意に確定するので、読み込み完了の前後関係で順番が揺れない）
+  function compareByDateTime(a, b){
+    var at = isFinite(a.ts) ? a.ts : Infinity;   // 日時不明は必ず末尾（先頭に紛れ込ませない）
+    var bt = isFinite(b.ts) ? b.ts : Infinity;
+    if(at !== bt) return at - bt;
+    var ad = a.date || "", bd = b.date || "";
+    if(ad !== bd) return ad < bd ? -1 : 1;
+    var n = (a.name || "").localeCompare(b.name || "", "ja", {numeric:true, sensitivity:"base"});
+    if(n !== 0) return n;
+    return a.seq - b.seq;
+  }
+  function sortPhotos(){ photos.sort(compareByDateTime); }
+
+  // 出力・プレビュー直前など、順序が確定していなければならない場面で必ず呼ぶ
+  function enforceOrder(){ if(isStrictOrder()) sortPhotos(); }
+
+  function tsLabel(p){
+    if(!isFinite(p.ts)) return "日時不明";
+    var d = new Date(p.ts), pad = function(n){ return String(n).padStart(2,"0"); };
+    return pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+  }
+
+  // 撮影日を手入力で変更したとき、並べ替え用の日時も必ず同期させる
+  function applyDateEdit(p, iso){
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+    if(!m) return;
+    p.date = iso;
+    var old = isFinite(p.ts) ? new Date(p.ts) : null;
+    p.ts = new Date(+m[1], +m[2]-1, +m[3],
+                    old ? old.getHours() : 0, old ? old.getMinutes() : 0,
+                    old ? old.getSeconds() : 0, old ? old.getMilliseconds() : 0).getTime();
+    p.tsSource = "手入力";
+    if(isStrictOrder()){ sortPhotos(); }
+    renderList();
+  }
+
+  function updateRuleHint(){
+    var strict = isStrictOrder();
+    $("ruleHint").textContent = strict
+      ? "並び順は撮影日時の古い順で固定されています（取り込み時・日付変更時・出力直前に自動整列）。手動で並べ替えるにはチェックを外してください。"
+      : "手動並べ替えモードです。撮影日時順には自動整列しません。";
+  }
+
+  // ---- 画像エンコード補助（縮小・再圧縮／サイズ計測） ----
+  function encodeFromImg(img, maxDim, quality){
+    var w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+    var scale = Math.min(1, maxDim / Math.max(w, h));
+    var cw = Math.max(1, Math.round(w * scale)), ch = Math.max(1, Math.round(h * scale));
+    var c = document.createElement("canvas");
+    c.width = cw; c.height = ch;
+    var ctx = c.getContext("2d");
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, cw, ch); // 透過PNG等の背景を白に
+    ctx.drawImage(img, 0, 0, cw, ch);
+    return c.toDataURL("image/jpeg", quality);
+  }
+  function dataUrlBytes(u){
+    var i = u.indexOf(","); if(i < 0) return u.length;
+    var s = u.slice(i + 1);
+    return Math.floor(s.length * 3 / 4); // base64 → おおよそのバイト数
+  }
+
+  // ---- 写真追加 ----
+  // 読み込みは非同期で完了順が前後するため、バッチ内の全ファイルが揃ってから
+  // まとめて追加し、必ず一括で並べ替える（完了順に依存させない）
+  function addFiles(fileList){
+    var files = Array.prototype.slice.call(fileList).filter(function(f){ return /^image\//.test(f.type); });
+    if(files.length === 0) return;
+
+    var batch = [], loaded = 0, failed = 0;
+
+    function finishOne(){
+      loaded++;
+      $("countBadge").textContent = "取り込み中… " + loaded + " / " + files.length;
+      if(loaded < files.length) return;
+      photos = photos.concat(batch);
+      sortPhotos();                       // ルール適用：撮影日時の古い順（1番＝最古）
+      renderList();
+      if(failed > 0) alert(failed + " 件のファイルを読み込めませんでした。");
+    }
+
+    files.forEach(function(f){
+      var seq = ++seqCounter;             // 選択順（最終タイブレーク用）
+      var settled = false;
+      function done(ok){ if(settled) return; settled = true; if(!ok) failed++; finishOne(); }
+
+      var abReader = new FileReader();
+      abReader.onerror = function(){ done(false); };
+      abReader.onload = function(ab){
+        var exif = null;
+        try { exif = getExifDateTime(ab.target.result); } catch(err){ exif = null; }
+        var parsed = exif ? parseExifDateTime(exif.raw, exif.subsec) : null;
+        var fileMs = f.lastModified || Date.now();
+        var photoDate = parsed ? parsed.date : fileDateToInput(fileMs);   // 表示用の日付
+        var photoTs   = parsed ? parsed.ts   : fileMs;                    // 並べ替え用の日時(ms)
+        var tsSource  = parsed ? (exif.source || "EXIF") : "ファイル日時"; // 日時の取得元
+
+        var urlReader = new FileReader();
+        urlReader.onerror = function(){ done(false); };
+        urlReader.onload = function(e){
+          var img = new Image();
+          img.onerror = function(){ done(false); };
+          img.onload = function(){
+            // マスター画像（最大2000px・出力時に再圧縮する元）
+            var master = encodeFromImg(img, 2000, 0.88);
+            var thumb = encodeFromImg(img, 240, 0.7);
+            var mImg = new Image();
+            mImg.onerror = function(){ done(false); };
+            mImg.onload = function(){
+              batch.push({
+                id: nextId++,
+                seq: seq,                        // 取り込み順（同一日時の最終タイブレーク）
+                name: f.name || "",              // ファイル名（同一日時のタイブレーク）
+                img: mImg,                       // 出力時の再圧縮元
+                fullUrl: master,                 // プレビュー表示用
+                url: thumb,                      // 一覧サムネイル
+                outUrl: null,                    // 出力用（PDFサイズ調整後）
+                date: photoDate,
+                ts: photoTs,                     // 撮影日時（古い順ソートに使用）
+                tsSource: tsSource,
+                place: "",
+                work: "",
+                comment: ""
+              });
+              done(true);
+            };
+            mImg.src = master;
+          };
+          img.src = e.target.result;
+        };
+        urlReader.readAsDataURL(f);
+      };
+      abReader.readAsArrayBuffer(f);
+    });
+  }
+
+  // ---- 写真リスト描画 ----
+  function renderList(){
+    var list = $("photoList");
+    var strict = isStrictOrder();
+    var lockMsg = "日時順を厳守中は使用できません";
+    list.innerHTML = "";
+    photos.forEach(function(p, i){
+      var item = document.createElement("div");
+      item.className = "photo-item";
+      var unknown = !isFinite(p.ts) || p.tsSource === "ファイル日時";
+      item.innerHTML =
+        '<div>' +
+          '<div class="idx-badge">No.' + (i+1) + '</div>' +
+          '<img class="thumb" src="' + p.url + '" alt="">' +
+          '<div class="ts-note' + (unknown ? ' warn' : '') + '">' +
+            escHtml(tsLabel(p)) + '<br>' + escHtml(p.tsSource || "") +
+          '</div>' +
+        '</div>' +
+        '<div class="meta">' +
+          '<div class="field"><label>撮影日</label><input type="date" data-f="date" value="' + p.date + '"></div>' +
+          '<div class="field"><label>場所</label><input type="text" data-f="place" value="' + escAttr(p.place) + '" placeholder="例）2階 ベランダ"></div>' +
+          '<div class="field full"><label>工事内容</label><input type="text" data-f="work" value="' + escAttr(p.work) + '" placeholder="例）防水シート貼り付け 施工後"></div>' +
+          '<div class="field full"><label>コメント・所見（任意）</label><textarea data-f="comment" placeholder="補足説明があれば記入">' + escHtml(p.comment) + '</textarea></div>' +
+        '</div>' +
+        '<div class="order">' +
+          '<button class="btn ghost small" data-act="top" title="' + (strict ? lockMsg : "先頭へ移動") + '"' + ((strict || i === 0) ? ' disabled' : '') + '>⇈ 先頭へ</button>' +
+          '<button class="btn ghost small" data-act="up" title="' + (strict ? lockMsg : "上へ") + '"' + ((strict || i === 0) ? ' disabled' : '') + '>▲</button>' +
+          '<button class="btn ghost small" data-act="down" title="' + (strict ? lockMsg : "下へ") + '"' + ((strict || i === photos.length - 1) ? ' disabled' : '') + '>▼</button>' +
+          '<button class="btn ghost small" data-act="end" title="' + (strict ? lockMsg : "最後へ移動") + '"' + ((strict || i === photos.length - 1) ? ' disabled' : '') + '>⇊ 最後へ</button>' +
+          '<button class="btn ghost small" data-act="copy" title="ひとつ前の写真の場所・工事内容・コメントをコピー"' + (i===0 ? ' disabled' : '') + '>↑前をコピー</button>' +
+          '<button class="btn danger small" data-act="del" title="削除">削除</button>' +
+        '</div>';
+
+      // 入力反映
+      item.querySelectorAll("[data-f]").forEach(function(inp){
+        var fld = inp.getAttribute("data-f");
+        inp.addEventListener("input", function(){ p[fld] = inp.value; });
+        // 撮影日を変更したら並べ替え用の日時も同期し、厳守中は即座に整列し直す
+        if(fld === "date"){
+          inp.addEventListener("change", function(){ applyDateEdit(p, inp.value); });
+        }
+      });
+      // 並び替え・削除
+      item.querySelector('[data-act="top"]').addEventListener("click", function(){ moveTo(i, 0); });
+      item.querySelector('[data-act="up"]').addEventListener("click", function(){ move(i, -1); });
+      item.querySelector('[data-act="down"]').addEventListener("click", function(){ move(i, 1); });
+      item.querySelector('[data-act="end"]').addEventListener("click", function(){ moveTo(i, photos.length - 1); });
+      var copyBtn = item.querySelector('[data-act="copy"]');
+      if(copyBtn && !copyBtn.disabled) copyBtn.addEventListener("click", function(){ copyFromPrev(i); });
+      item.querySelector('[data-act="del"]').addEventListener("click", function(){ removePhoto(p.id); });
+
+      list.appendChild(item);
+    });
+
+    $("emptyHint").style.display = photos.length ? "none" : "block";
+    $("countBadge").textContent = "写真 " + photos.length + " 枚";
+    scheduleSave();
+  }
+
+  // 手動並べ替えは「日時順を厳守」が無効なときのみ許可
+  function canReorder(){
+    if(isStrictOrder()){
+      alert("「撮影日時の古い順を厳守」が有効です。手動で並べ替える場合はチェックを外してください。");
+      return false;
+    }
+    return true;
+  }
+  function move(i, dir){
+    if(!canReorder()) return;
+    var j = i + dir;
+    if(j < 0 || j >= photos.length) return;
+    var tmp = photos[i]; photos[i] = photos[j]; photos[j] = tmp;
+    renderList();
+  }
+  // 指定位置へ移動（先頭へ／最後へ）。間の写真は順序を保ったまま繰り上がる
+  function moveTo(i, j){
+    if(!canReorder()) return;
+    if(i === j || i < 0 || i >= photos.length || j < 0 || j >= photos.length) return;
+    var p = photos.splice(i, 1)[0];
+    photos.splice(j, 0, p);
+    renderList();
+  }
+  function copyFromPrev(i){
+    if(i <= 0) return;
+    var prev = photos[i-1], cur = photos[i];
+    cur.place = prev.place;
+    cur.work = prev.work;
+    cur.comment = prev.comment;
+    renderList();
+  }
+  function removePhoto(id){
+    if(!confirm("この写真を削除しますか？")) return;
+    photos = photos.filter(function(p){ return p.id !== id; });
+    renderList();
+  }
+
+  function escHtml(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  function escAttr(s){ return escHtml(s).replace(/"/g,"&quot;"); }
+
+  // ---- 報告書（プレビュー）生成 ----
+  function buildReport(srcField){
+    srcField = srcField || "fullUrl";
+    var layout = $("layout").value;
+    var perPage, cols, rows, cellCls, gridCls;
+    if(layout === "2x2"){ perPage=4; cols=2; rows=2; }
+    else if(layout === "2x3"){ perPage=6; cols=2; rows=3; }
+    else if(layout === "3x3"){ perPage=9; cols=3; rows=3; }
+    else { perPage=2; cols=2; rows=1; } // 1x2 大きめ
+
+    gridCls = "c" + cols;
+    cellCls = (cols === 3) ? "c3" : "c2";
+
+    // 写真枠の総領域と情報枠高さを固定（写真の大小に依存しない）
+    var GRID_H = 216, GAP = 6;            // mm
+    var capH = (cols === 3) ? 20 : 26;    // mm：情報枠の固定高さ
+    var gridStyle =
+      "height:" + GRID_H + "mm;gap:" + GAP + "mm;" +
+      "grid-template-columns:repeat(" + cols + ",1fr);" +
+      "grid-template-rows:repeat(" + rows + ",1fr);" +
+      "--capH:" + capH + "mm;";
+
+    var header = {
+      title: getReportTitle(),
+      date: formatJP($("repDate").value),
+      prop: $("propName").value,
+      company: $("company").value,
+      summary: $("summary").value
+    };
+
+    var container = $("reportPages");
+    container.innerHTML = "";
+
+    if(photos.length === 0){
+      container.innerHTML = '<div class="report-page"><div style="text-align:center;color:#888;padding:60px;">写真がありません。編集に戻って写真を取り込んでください。</div></div>';
+      return;
+    }
+
+    var totalPages = Math.ceil(photos.length / perPage);
+    for(var pg = 0; pg < totalPages; pg++){
+      var page = document.createElement("div");
+      page.className = "report-page";
+
+      // ヘッダー（1ページ目は概要も表示）
+      var sub = '';
+      if(header.prop)   sub += '<div><b>物件：</b>' + escHtml(header.prop) + '</div>';
+      if(header.date)   sub += '<div><b>報告日：</b>' + escHtml(header.date) + '</div>';
+
+      var headerHtml =
+        '<div class="rep-header">' +
+          '<div class="rep-title">' + escHtml(header.title) + '</div>' +
+          '<div class="rep-sub">' + sub + '</div>' +
+        '</div>';
+
+      var summaryHtml = (pg === 0 && header.summary)
+        ? '<div style="font-size:12px;margin-bottom:8px;border:1px solid #ddd;background:#f7f9fb;border-radius:4px;padding:6px 9px;"><b style="color:#1565c0;">工事概要：</b>' + escHtml(header.summary).replace(/\n/g,"<br>") + '</div>'
+        : '';
+
+      // セル
+      var slice = photos.slice(pg*perPage, pg*perPage + perPage);
+      var cellsHtml = slice.map(function(p, k){
+        var globalNo = pg*perPage + k + 1;
+        var cap = '';
+        cap += '<div class="row"><span class="lbl">No.</span><span class="val">' + globalNo + '</span></div>';
+        if(p.date)  cap += '<div class="row"><span class="lbl">撮影日</span><span class="val">' + escHtml(formatJP(p.date)) + '</span></div>';
+        if(p.place) cap += '<div class="row"><span class="lbl">場所</span><span class="val">' + escHtml(p.place) + '</span></div>';
+        if(p.work)  cap += '<div class="row"><span class="lbl">内容</span><span class="val">' + escHtml(p.work) + '</span></div>';
+        if(p.comment) cap += '<div class="comment">' + escHtml(p.comment).replace(/\n/g,"<br>") + '</div>';
+        var imgSrc = p[srcField] || p.fullUrl || p.url;
+        return '<div class="rep-cell ' + cellCls + '">' +
+                 '<div class="img-wrap"><img src="' + imgSrc + '" alt=""></div>' +
+                 '<div class="rep-caption">' + cap + '</div>' +
+               '</div>';
+      }).join("");
+
+      var footer =
+        '<div class="rep-footer">' +
+          '<div>' + escHtml(header.company || "") + '</div>' +
+          '<div>' + (pg+1) + ' / ' + totalPages + ' ページ</div>' +
+        '</div>';
+
+      page.innerHTML = headerHtml + summaryHtml +
+        '<div class="rep-grid ' + gridCls + '" style="' + gridStyle + '">' + cellsHtml + '</div>' + footer;
+      container.appendChild(page);
+    }
+  }
+
+  function getReportTitle(){
+    var sel = $("repTitleSelect");
+    if(sel.value === "__custom__"){
+      return $("repTitleCustom").value.trim() || "報告書";
+    }
+    return sel.value;
+  }
+
+  function formatJP(iso){
+    if(!iso) return "";
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+    if(!m) return iso;
+    return m[1] + "年" + Number(m[2]) + "月" + Number(m[3]) + "日";
+  }
+
+  // ---- イベント ----
+  var dz = $("dropzone");
+  $("pickBtn").addEventListener("click", function(){ $("fileInput").click(); });
+  $("fileInput").addEventListener("change", function(e){ addFiles(e.target.files); e.target.value=""; });
+
+  ["dragenter","dragover"].forEach(function(ev){
+    dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.add("over"); });
+  });
+  ["dragleave","drop"].forEach(function(ev){
+    dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.remove("over"); });
+  });
+  dz.addEventListener("drop", function(e){
+    if(e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files);
+  });
+
+  function showPreview(){
+    if(photos.length === 0){ alert("写真がありません。先に写真を取り込んでください。"); return; }
+    enforceOrder(); renderList();   // 出力前に必ず順序ルールを適用
+    buildReport("fullUrl");
+    document.body.classList.add("preview-mode");
+    window.scrollTo(0,0);
+  }
+  function backToEdit(){
+    document.body.classList.remove("preview-mode");
+  }
+
+  // ---- 出力（PDFサイズを5MB以内に調整してから印刷） ----
+  function outputPrint(){
+    if(photos.length === 0){ alert("写真がありません。"); return; }
+    enforceOrder(); renderList();   // 出力前に必ず順序ルールを適用
+    var TARGET = Math.floor(4.7 * 1024 * 1024); // PDFの付帯データを見込み、画像合計をこの範囲に
+    // 画質の高い順に試し、合計が目標以下になった段階で採用（収まらなければ最も圧縮した設定を採用）
+    var steps = [
+      {maxDim:2000, q:0.85},
+      {maxDim:1800, q:0.80},
+      {maxDim:1600, q:0.78},
+      {maxDim:1500, q:0.72},
+      {maxDim:1300, q:0.68},
+      {maxDim:1100, q:0.62},
+      {maxDim:1000, q:0.58},
+      {maxDim:900,  q:0.52},
+      {maxDim:800,  q:0.45}
+    ];
+    var chosen = null, chosenTotal = 0;
+    for(var s = 0; s < steps.length; s++){
+      var urls = [], total = 0;
+      for(var i = 0; i < photos.length; i++){
+        var u = encodeFromImg(photos[i].img, steps[s].maxDim, steps[s].q);
+        urls.push(u); total += dataUrlBytes(u);
+      }
+      chosen = urls; chosenTotal = total;
+      if(total <= TARGET) break;
+    }
+    photos.forEach(function(p, i){ p.outUrl = chosen[i]; });
+
+    var mb = (chosenTotal / 1024 / 1024);
+    if(chosenTotal > TARGET){
+      alert("画像を最大限圧縮しましたが、合計が約" + mb.toFixed(1) +
+            "MBあります。写真枚数が多いため5MBを超える可能性があります。枚数を減らすことを検討してください。");
+    }
+
+    buildReport("outUrl");
+    // 画像のデコード完了を待ってから印刷（初回に空表示になるのを防ぐ）
+    whenImagesReady($("reportPages"), function(){ window.print(); });
+  }
+
+  // 指定コンテナ内の全画像が読み込み・デコード完了するまで待って cb を呼ぶ
+  function whenImagesReady(container, cb){
+    var imgs = container ? container.querySelectorAll("img") : [];
+    var total = imgs.length;
+    if(total === 0){ cb(); return; }
+    var done = 0, called = false;
+    function finish(){
+      if(called) return;
+      called = true;
+      // レイアウト確定を待つため次フレームで実行
+      if(window.requestAnimationFrame){
+        requestAnimationFrame(function(){ requestAnimationFrame(cb); });
+      } else {
+        setTimeout(cb, 0);
+      }
+    }
+    function one(){ done++; if(done >= total) finish(); }
+    for(var i = 0; i < imgs.length; i++){
+      var img = imgs[i];
+      if(img.complete && img.naturalWidth > 0){
+        if(img.decode){ img.decode().then(one, one); } else { one(); }
+      } else {
+        img.addEventListener("load", one);
+        img.addEventListener("error", one);
+      }
+    }
+    // セーフティネット：万一 load が来なくても最大3秒で印刷を実行
+    setTimeout(finish, 3000);
+  }
+
+  $("previewBtn").addEventListener("click", showPreview);
+  $("backBtn").addEventListener("click", backToEdit);
+  $("printBtn").addEventListener("click", outputPrint);
+  $("printBtn2").addEventListener("click", outputPrint);
+
+  $("repTitleSelect").addEventListener("change", function(){
+    var custom = this.value === "__custom__";
+    $("repTitleCustom").style.display = custom ? "block" : "none";
+    if(custom){ $("repTitleCustom").focus(); }
+  });
+
+  $("layout").addEventListener("change", function(){
+    if(document.body.classList.contains("preview-mode")) buildReport("fullUrl");
+  });
+
+  $("strictOrder").addEventListener("change", function(){
+    if(isStrictOrder()) sortPhotos();
+    updateRuleHint();
+    renderList();
+  });
+  $("sortNowBtn").addEventListener("click", function(){
+    if(photos.length === 0){ alert("写真がありません。"); return; }
+    sortPhotos();
+    renderList();
+  });
+
+  // ================= 端末内への自動保存（IndexedDB・サーバーなし） =================
+  $("camBtn").addEventListener("click", function(){ $("camInput").click(); });
+  $("camInput").addEventListener("change", function(e){ addFiles(e.target.files); e.target.value=""; });
+
+  var FIELDS = ["repTitleSelect","repTitleCustom","repDate","propName","company","summary","layout"];
+  var saveTimer = null, restoring = true;
+
+  function openDb(){
+    return new Promise(function(res, rej){
+      var r = indexedDB.open("photo-report", 1);
+      r.onupgradeneeded = function(){ r.result.createObjectStore("draft"); };
+      r.onsuccess = function(){ res(r.result); };
+      r.onerror = function(){ rej(r.error); };
+    });
+  }
+  function dbPut(val){
+    return openDb().then(function(db){ return new Promise(function(res, rej){
+      var t = db.transaction("draft", "readwrite");
+      if(val === null) t.objectStore("draft").delete("current"); else t.objectStore("draft").put(val, "current");
+      t.oncomplete = function(){ res(); }; t.onerror = function(){ rej(t.error); }; t.onabort = t.onerror;
+    }); });
+  }
+  function dbGet(){
+    return openDb().then(function(db){ return new Promise(function(res, rej){
+      var q = db.transaction("draft").objectStore("draft").get("current");
+      q.onsuccess = function(){ res(q.result); }; q.onerror = function(){ rej(q.error); };
+    }); });
+  }
+  function note(msg){ $("draftNote").textContent = msg; }
+
+  function scheduleSave(){
+    if(restoring) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveDraft, 700);
+  }
+  function saveDraft(){
+    var data = { fields: {}, strict: $("strictOrder").checked, nextId: nextId, seqCounter: seqCounter,
+      photos: photos.map(function(p){ return { id:p.id, seq:p.seq, name:p.name, fullUrl:p.fullUrl, url:p.url,
+        date:p.date, ts:isFinite(p.ts) ? p.ts : null, tsSource:p.tsSource, place:p.place, work:p.work, comment:p.comment }; }) };
+    FIELDS.forEach(function(id){ data.fields[id] = $(id).value; });
+    dbPut(data).then(function(){ note("この端末に自動保存済み"); },
+      function(){ note("自動保存できません（端末の空き容量を確認してください）"); });
+  }
+  FIELDS.forEach(function(id){ $(id).addEventListener("input", scheduleSave); $(id).addEventListener("change", scheduleSave); });
+  $("strictOrder").addEventListener("change", scheduleSave);
+
+  function restoreDraft(){
+    return dbGet().then(function(d){
+      if(!d) return;
+      FIELDS.forEach(function(id){ if(d.fields && d.fields[id] != null) $(id).value = d.fields[id]; });
+      $("repTitleCustom").style.display = $("repTitleSelect").value === "__custom__" ? "block" : "none";
+      $("strictOrder").checked = d.strict !== false;
+      nextId = d.nextId || 1; seqCounter = d.seqCounter || 0;
+      return Promise.all((d.photos || []).map(function(s){
+        return new Promise(function(res){
+          var im = new Image();
+          im.onload = function(){
+            photos.push({ id:s.id, seq:s.seq, name:s.name, img:im, fullUrl:s.fullUrl, url:s.url, outUrl:null,
+              date:s.date, ts:(s.ts == null ? NaN : s.ts), tsSource:s.tsSource, place:s.place, work:s.work, comment:s.comment });
+            res();
+          };
+          im.onerror = function(){ res(); };
+          im.src = s.fullUrl;
+        });
+      })).then(function(){
+        if(d.photos && d.photos.length){ photos.sort(function(a, b){ return a.seq - b.seq; }); if(isStrictOrder()) sortPhotos(); note("前回の続きを復元しました"); }
+      });
+    });
+  }
+
+  $("newBtn").addEventListener("click", function(){
+    if(!confirm("今の報告書の内容（写真・入力）をすべて消して、新しく始めますか？\n（元に戻せません）")) return;
+    photos = []; nextId = 1; seqCounter = 0;
+    ["repTitleCustom","propName","summary"].forEach(function(id){ $(id).value = ""; });
+    $("repTitleSelect").value = "施工写真報告書"; $("repTitleCustom").style.display = "none";
+    clearTimeout(saveTimer);
+    dbPut(null).then(function(){ note("新しい報告書を始めました"); });
+    renderList();
+  });
+
+  updateRuleHint();
+  restoreDraft().catch(function(){}).then(function(){
+    restoring = false;
+    updateRuleHint();
+    renderList();
+    if(navigator.storage && navigator.storage.persist){ navigator.storage.persist().catch(function(){}); }
+  });
+
+  if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(function(){}); }
+})();
+</script>
+</body>
+</html>
