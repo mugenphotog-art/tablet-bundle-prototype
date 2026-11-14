@@ -205,10 +205,11 @@
           <option lang="ja" value="__custom__">直接入力…</option>
         </select>
         <input type="text" id="repTitleCustom" placeholder="報告書タイトルを入力" style="display:none;margin-top:6px;">
+        <div class="defco"><button class="btn ghost small" type="button" id="defTitleBtn">デフォルトとして登録</button><span id="defTitleMsg"></span></div>
       </div>
-      <div class="field"><label>報告日（年・月・日）</label>
-        <div class="datesel"><select id="dY" lang="ja"></select>年<select id="dM" lang="ja"></select>月<select id="dD" lang="ja"></select>日</div>
-        <input type="hidden" id="repDate">
+      <div class="field"><label>報告日（タップするとカレンダーが開きます）</label>
+        <input type="date" id="repDate">
+        <div class="defco"><b id="repDateJp" style="font-size:15px;"></b></div>
       </div>
       <div class="field"><label>物件名</label><input type="text" id="propName" placeholder="例）○○マンション 301号室"></div>
       <div class="field"><label>会社名（作成者）</label><input type="text" id="company" placeholder="例）○○工務店">
@@ -874,7 +875,7 @@
   $("camInput").addEventListener("change", function(e){ addFiles(e.target.files); e.target.value=""; });
 
   var FIELDS = ["repTitleSelect","repTitleCustom","repDate","propName","company","summary","layout"];
-  var saveTimer = null, restoring = true;
+  var saveTimer = null, restoring = true, hadDraft = false;
 
   function openDb(){
     return new Promise(function(res, rej){
@@ -918,6 +919,7 @@
   function restoreDraft(){
     return dbGet().then(function(d){
       if(!d) return;
+      hadDraft = true;
       FIELDS.forEach(function(id){ if(d.fields && d.fields[id] != null) $(id).value = d.fields[id]; });
       $("repTitleCustom").style.display = $("repTitleSelect").value === "__custom__" ? "block" : "none";
       $("strictOrder").checked = d.strict !== false;
@@ -944,33 +946,39 @@
     photos = []; nextId = 1; seqCounter = 0;
     ["repTitleCustom","propName","summary"].forEach(function(id){ $(id).value = ""; });
     $("repTitleSelect").value = "施工写真報告書"; $("repTitleCustom").style.display = "none";
+    applyDefaultTitle();
     clearTimeout(saveTimer);
     dbPut(null).then(function(){ note("新しい報告書を始めました"); });
     renderList();
   });
 
   // ---- 報告日：年・月・日の順に選ぶ（端末の表示順に左右されない） ----
-  var dY = $("dY"), dM = $("dM"), dD = $("dD");
-  (function(){
-    var y0 = new Date().getFullYear(), i;
-    for(i = y0 - 5; i <= y0 + 5; i++) dY.add(new Option(i, i));
-    for(i = 1; i <= 12; i++) dM.add(new Option(i, i));
-    for(i = 1; i <= 31; i++) dD.add(new Option(i, i));
-  })();
-  function syncDateUI(){
-    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec($("repDate").value);
-    if(!m) return;
-    dY.value = +m[1]; dM.value = +m[2]; dD.value = +m[3];
-  }
-  function readDateUI(){
-    var y = +dY.value, mo = +dM.value, last = new Date(y, mo, 0).getDate();
-    if(+dD.value > last) dD.value = last;
-    var d = +dD.value;
-    $("repDate").value = y + "-" + String(mo).padStart(2,"0") + "-" + String(d).padStart(2,"0");
-    $("repDate").dispatchEvent(new Event("input"));
-  }
-  [dY, dM, dD].forEach(function(s){ s.addEventListener("change", readDateUI); });
+  // カレンダーで選ぶ。端末による表示順の違いに左右されないよう、下に「年月日」で必ず表示する
+  function syncDateUI(){ $("repDateJp").textContent = formatJP($("repDate").value); }
+  $("repDate").addEventListener("input", syncDateUI);
+  $("repDate").addEventListener("change", syncDateUI);
   syncDateUI();
+
+  // ---- 報告書タイトルのデフォルト登録 ----
+  var DEF_TITLE_KEY = "photo-report-default-title";
+  function applyDefaultTitle(){
+    try{
+      var t = JSON.parse(localStorage.getItem(DEF_TITLE_KEY) || "null");
+      if(!t) return false;
+      var sel = $("repTitleSelect");
+      sel.value = t.sel; if(sel.value !== t.sel) return false;
+      $("repTitleCustom").value = t.custom || "";
+      $("repTitleCustom").style.display = t.sel === "__custom__" ? "block" : "none";
+      return true;
+    }catch(e){ return false; }
+  }
+  $("defTitleBtn").addEventListener("click", function(){
+    var msg = $("defTitleMsg");
+    try{
+      localStorage.setItem(DEF_TITLE_KEY, JSON.stringify({ sel: $("repTitleSelect").value, custom: $("repTitleCustom").value }));
+      msg.textContent = "「" + getReportTitle() + "」を登録しました。次回から最初に表示されます。";
+    }catch(e){ msg.textContent = "登録できませんでした（ブラウザの設定を確認してください）。"; }
+  });
 
   // ---- 会社名のデフォルト登録（この端末のブラウザに保存） ----
   var DEF_KEY = "photo-report-default-company";
@@ -986,6 +994,7 @@
   updateRuleHint();
   restoreDraft().catch(function(){}).then(function(){
     syncDateUI();
+    if(!hadDraft) applyDefaultTitle();
     if(!$("company").value) $("company").value = getDefCo();
     restoring = false;
     updateRuleHint();
