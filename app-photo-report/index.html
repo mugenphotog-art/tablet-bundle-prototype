@@ -203,7 +203,7 @@
 <!-- ===================== 操作画面 ===================== -->
 <div class="editor">
   <div class="app-title">
-    📷 写真報告書 <span class="ver">0.1.22</span>
+    📷 写真報告書 <span class="ver">0.1.23</span>
     <button type="button" id="clearBtn" class="clear-btn">前回の記録を消す</button>
     <small>写真を取り込み → 情報を入力 → PDF出力（印刷でPDF保存）</small>
     <span class="draft-note" id="draftNote"></span>
@@ -229,7 +229,7 @@
         <input type="date" id="repDate">
         <div class="defco"><b id="repDateJp" style="font-size:15px;"></b></div>
       </div>
-      <div class="field"><label>物件名</label><input type="text" id="propName" placeholder="例）○○マンション 301号室"></div>
+      <div class="field"><label>案件名</label><input type="text" id="propName" placeholder="例）○○マンション 301号室"></div>
       <div class="field"><label>会社名（作成者）</label><input type="text" id="company" placeholder="例）○○工務店">
         <div class="defco"><button class="btn ghost small" type="button" id="defCoBtn">デフォルトとして登録</button><span id="defCoMsg"></span></div>
       </div>
@@ -599,7 +599,7 @@
         '<div class="meta">' +
           '<div class="field"><label>撮影日</label><input type="date" data-f="date" value="' + p.date + '"></div>' +
           '<div class="field"><label>場所</label><input type="text" data-f="place" value="' + escAttr(p.place) + '" placeholder="例）2階 ベランダ"></div>' +
-          '<div class="field full"><label>工事内容</label><input type="text" data-f="work" value="' + escAttr(p.work) + '" placeholder="例）防水シート貼り付け 施工後"></div>' +
+          '<div class="field full"><label>内容</label><input type="text" data-f="work" value="' + escAttr(p.work) + '" placeholder="例）防水シート貼り付け 施工後"></div>' +
           '<div class="field full"><label>コメント・所見（任意）</label><textarea data-f="comment" placeholder="補足説明があれば記入">' + escHtml(p.comment) + '</textarea></div>' +
         '</div>' +
         '<div class="order">' +
@@ -607,7 +607,7 @@
           '<button class="btn ghost small" data-act="up" title="' + (strict ? lockMsg : "上へ") + '"' + ((strict || i === 0) ? ' disabled' : '') + '>▲</button>' +
           '<button class="btn ghost small" data-act="down" title="' + (strict ? lockMsg : "下へ") + '"' + ((strict || i === photos.length - 1) ? ' disabled' : '') + '>▼</button>' +
           '<button class="btn ghost small" data-act="end" title="' + (strict ? lockMsg : "最後へ移動") + '"' + ((strict || i === photos.length - 1) ? ' disabled' : '') + '>⇊ 最後へ</button>' +
-          '<button class="btn ghost small" data-act="copy" title="ひとつ前の写真の場所・工事内容・コメントをコピー"' + (i===0 ? ' disabled' : '') + '>↑前をコピー</button>' +
+          '<button class="btn ghost small" data-act="copy" title="ひとつ前の写真の場所・内容・コメントをコピー"' + (i===0 ? ' disabled' : '') + '>↑前をコピー</button>' +
           '<button class="btn danger small" data-act="del" title="削除">削除</button>' +
         '</div>';
 
@@ -722,7 +722,7 @@
 
       // ヘッダー（1ページ目は概要も表示）
       var sub = '';
-      if(header.prop)   sub += '<div><b>物件：</b>' + escHtml(header.prop) + '</div>';
+      if(header.prop)   sub += '<div><b>案件名：</b>' + escHtml(header.prop) + '</div>';
       if(header.date)   sub += '<div><b>報告日：</b>' + escHtml(header.date) + '</div>';
 
       var headerHtml =
@@ -959,10 +959,10 @@
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block"; $("camMsg").textContent = "カメラを起動中…（許可の確認が出たら「許可」を押してください）";
     clearTimeout(camWait); camWait = setTimeout(function(){
-      if(!camStream){ $("camMsg").textContent = "カメラから応答がありません。下の「標準カメラで撮る」を押してください。（版 0.1.22）"; }
+      if(!camStream){ $("camMsg").textContent = "カメラから応答がありません。下の「標準カメラで撮る」を押してください。（版 0.1.23）"; }
     }, 8000);
     if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){
-      $("camMsg").textContent = "この画面（接続方式）ではアプリ内カメラが使えません。下の「標準カメラで撮る」を押してください。（版 0.1.22）"; return;
+      $("camMsg").textContent = "この画面（接続方式）ではアプリ内カメラが使えません。下の「標準カメラで撮る」を押してください。（版 0.1.23）"; return;
     }
     // 端末によって受け付ける条件が違うため、条件をゆるめながら順に試す
     var tries = [
@@ -996,7 +996,7 @@
     // 閉じずに、標準カメラへ切り替えるボタンを出す（ユーザーの操作でないとカメラが開かないため）
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block";
-    $("camMsg").textContent = "カメラを起動できませんでした（" + name + "）。" + tip + "（版 0.1.22）";
+    $("camMsg").textContent = "カメラを起動できませんでした（" + name + "）。" + tip + "（版 0.1.23）";
   }
   function shoot(){
     var v = $("camVideo");
@@ -1016,7 +1016,7 @@
     // 画面を先に描画させてからカメラを要求する（端末によってはカメラ要求中に画面が止まるため）
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block"; $("camMsg").textContent = "カメラを起動中…";
-    requestAnimationFrame(function(){ setTimeout(function(){ try{ openCamera(); }catch(e){ $("camMsg").textContent = "エラー: " + (e && e.message) + "（版 0.1.22）"; } }, 150); });
+    requestAnimationFrame(function(){ setTimeout(function(){ try{ openCamera(); }catch(e){ $("camMsg").textContent = "エラー: " + (e && e.message) + "（版 0.1.23）"; } }, 150); });
   });
   $("camShot").addEventListener("click", shoot);
   $("camClose").addEventListener("click", closeCamera);
