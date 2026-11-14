@@ -109,7 +109,13 @@ function startEdit(key) {
     const label = m ? m[2] : full;
     if (m && m[1] !== lastCat) {
       lastCat = m[1];
-      const h = document.createElement("h3"); h.className = "cat"; h.textContent = lastCat;
+      const h = document.createElement("h3"); h.className = "cat";
+      const ht = document.createElement("span"); ht.textContent = lastCat; h.appendChild(ht);
+      if (t.abnormal) {
+        const s1 = document.createElement("span"); s1.className = "abnHead"; s1.textContent = "異常あり";
+        const s2 = document.createElement("span"); s2.className = "noteHead"; s2.textContent = "内容";
+        h.append(s1, s2);
+      }
       $("items").appendChild(h);
     }
     const l = document.createElement("label"); l.className = "check";
@@ -122,8 +128,8 @@ function startEdit(key) {
     const row = document.createElement("div"); row.className = "chkrow";
     const al = document.createElement("label"); al.className = "abn";
     const ac = document.createElement("input"); ac.type = "checkbox";
-    al.append(ac, document.createTextNode("異常あり"));
-    const tx_ = document.createElement("input"); tx_.type = "text"; tx_.className = "abnNote"; tx_.placeholder = "異常の内容を入力";
+    al.appendChild(ac); al.title = "異常あり"; ac.setAttribute("aria-label", "異常あり");
+    const tx_ = document.createElement("input"); tx_.type = "text"; tx_.className = "abnNote"; tx_.placeholder = (m && i > 0 && t.items[i-1].indexOf("【" + m[1] + "】") === 0) ? "" : "異常の内容を入力";
     ac.onchange = () => { current.abn[i] = ac.checked; row.classList.toggle("bad", ac.checked); };
     tx_.oninput = () => {
       current.abnNote[i] = tx_.value;

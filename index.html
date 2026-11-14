@@ -32,14 +32,18 @@
   .empty { text-align:center; padding:28px 8px; color:#5b6762; }
   h2 { font-size:1.05em; margin:4px 0 10px; }
   select { font:inherit; min-height:52px; padding:6px 10px; border:1px solid var(--line); border-radius:8px; max-width:100%; }
-  .chkrow { display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px; border-bottom:1px solid var(--line); }
-  .chkrow label.check { flex:1 1 230px; border-bottom:0; font-size:.82em; min-height:48px; }
+  /* 点検項目：項目名 / 異常あり（チェックだけ） / 内容 の3列。「異常あり」の文字は分野の見出し行に1回だけ出す */
+  .chkrow, h3.cat { display:grid; grid-template-columns:minmax(0,1fr) 64px minmax(130px,1fr); gap:0 10px; align-items:center; }
+  .chkrow { border-bottom:1px solid var(--line); }
+  .chkrow label.check { border-bottom:0; font-size:.82em; min-height:48px; }
   .chkrow label.check input { width:24px; height:24px; }
-  .chkrow label.abn { display:flex; align-items:center; gap:6px; font-size:.82em; color:var(--warn); white-space:nowrap; min-height:48px; }
-  .chkrow label.abn input { width:24px; height:24px; }
-  .chkrow input.abnNote { flex:1 1 180px; min-width:0; font:inherit; font-size:.82em; min-height:44px; padding:4px 8px; border:1px solid var(--line); border-radius:8px; }
+  .chkrow label.abn { display:flex; justify-content:center; align-items:center; min-height:48px; }
+  .chkrow label.abn input { width:28px; height:28px; accent-color:var(--warn); }
+  .chkrow input.abnNote { min-width:0; font:inherit; font-size:.82em; min-height:44px; padding:4px 8px; border:1px solid var(--line); border-radius:8px; }
   .chkrow.bad { background:#fff4e8; }
   h3.cat { font-size:.95em; margin:14px 0 2px; padding:4px 10px; background:#e3ebe8; border-radius:6px; color:var(--accent); }
+  h3.cat .abnHead { font-size:.82em; text-align:center; color:var(--warn); font-weight:700; }
+  h3.cat .noteHead { font-size:.82em; color:#5b6762; font-weight:400; }
   .memo { border:1px solid var(--line); border-radius:10px; padding:10px; margin-bottom:8px; }
   .memo.contact { border-left:6px solid var(--warn); }
   .memo.done { opacity:.6; }
