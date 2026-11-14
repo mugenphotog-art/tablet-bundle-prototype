@@ -891,14 +891,22 @@
 
   // ================= 端末内への自動保存（IndexedDB・サーバーなし） =================
   // ---- 連続撮影：撮影ボタンを押すだけで即保存（確認のチェック操作なし）。閉じるまでカメラは開いたまま ----
-  var camStream = null, camShots = 0;
+  var camStream = null, camShots = 0, camWait = null;
   function closeCamera(){
     if(camStream){ camStream.getTracks().forEach(function(t){ t.stop(); }); camStream = null; }
     $("camVideo").srcObject = null;
     $("camOverlay").style.display = "none";
   }
   function openCamera(){
-    if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){ $("camInput").click(); return; } // 非対応なら従来方式
+    // 押した瞬間に画面を出す（反応がないように見えないため）
+    $("camOverlay").style.display = "flex";
+    $("camMsg").style.display = "block"; $("camMsg").textContent = "カメラを起動中…（許可の確認が出たら「許可」を押してください）";
+    clearTimeout(camWait); camWait = setTimeout(function(){
+      if(!camStream){ $("camMsg").textContent = "カメラから応答がありません。下の「標準カメラで撮る」を押してください。（版 v8）"; }
+    }, 8000);
+    if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){
+      $("camMsg").textContent = "この画面（接続方式）ではアプリ内カメラが使えません。下の「標準カメラで撮る」を押してください。（版 v8）"; return;
+    }
     // 端末によって受け付ける条件が違うため、条件をゆるめながら順に試す
     var tries = [
       { video: { facingMode: { ideal: "environment" } }, audio: false },
@@ -931,7 +939,7 @@
     // 閉じずに、標準カメラへ切り替えるボタンを出す（ユーザーの操作でないとカメラが開かないため）
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block";
-    $("camMsg").textContent = "カメラを起動できませんでした（" + name + "）。" + tip;
+    $("camMsg").textContent = "カメラを起動できませんでした（" + name + "）。" + tip + "（版 v8）";
   }
   function shoot(){
     var v = $("camVideo");
