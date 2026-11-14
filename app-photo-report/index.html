@@ -228,7 +228,7 @@
 
   <!-- 写真取り込み -->
   <div class="card">
-    <h2><span class="num">2</span>施工写真を取り込む</h2>
+    <h2><span class="num">2</span>写真を取り込む</h2>
     <div class="dropzone" id="dropzone">
       <p style="margin:0 0 8px;font-size:15px;"><strong>ここに写真をドラッグ＆ドロップ</strong></p>
       <p style="margin:0 0 12px;">または</p>
@@ -298,9 +298,10 @@
 <!-- ===================== 連続撮影カメラ（撮影ボタン1回で保存） ===================== -->
 <div id="camOverlay" style="display:none;position:fixed;inset:0;z-index:100;background:#000;flex-direction:column;">
   <video id="camVideo" playsinline muted autoplay style="flex:1 1 auto;min-height:0;width:100%;object-fit:contain;background:#000;"></video>
+  <div id="camMsg" style="display:none;position:absolute;left:16px;right:16px;top:30%;padding:14px;background:rgba(0,0,0,.75);color:#fff;border-radius:8px;font-size:16px;line-height:1.6;text-align:center;z-index:2;"></div>
   <div id="camFlash" style="position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s;"></div>
   <div style="flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;background:#111;color:#fff;">
-    <button class="btn ghost" type="button" id="camClose" style="min-width:110px;">閉じる</button>
+    <div style="display:flex;flex-direction:column;gap:6px;"><button class="btn ghost" type="button" id="camClose" style="min-width:110px;">閉じる</button><button class="btn ghost" type="button" id="camNative" style="min-width:110px;">標準カメラで撮る</button></div>
     <button type="button" id="camShot" aria-label="撮影" style="width:76px;height:76px;border-radius:50%;border:6px solid #fff;background:#e53935;cursor:pointer;"></button>
     <div id="camCount" style="min-width:110px;text-align:right;font-size:16px;font-weight:700;">0 枚撮影</div>
   </div>
@@ -898,17 +899,39 @@
   }
   function openCamera(){
     if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){ $("camInput").click(); return; } // 非対応なら従来方式
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 2560 }, height: { ideal: 1440 } }, audio: false })
-      .then(function(s){
+    // 端末によって受け付ける条件が違うため、条件をゆるめながら順に試す
+    var tries = [
+      { video: { facingMode: { ideal: "environment" } }, audio: false },
+      { video: true, audio: false }
+    ];
+    var lastErr = null;
+    function attempt(i){
+      if(i >= tries.length){ failCamera(lastErr); return; }
+      navigator.mediaDevices.getUserMedia(tries[i]).then(function(s){
         camStream = s; camShots = 0; $("camCount").textContent = "0 枚撮影";
-        $("camVideo").srcObject = s;
+        var v = $("camVideo");
+        v.setAttribute("playsinline", ""); v.muted = true;
+        v.srcObject = s;
         $("camOverlay").style.display = "flex";
-        $("camVideo").play().catch(function(){});
-      })
-      .catch(function(){
-        alert("カメラを使えませんでした。ブラウザのカメラ許可を確認してください。\n（このあと標準のカメラ画面に切り替えます）");
-        $("camInput").click();
-      });
+        $("camMsg").style.display = "block"; $("camMsg").textContent = "カメラを起動中…";
+        var done = function(){ $("camMsg").style.display = "none"; };
+        v.onloadedmetadata = function(){ v.play().then(done).catch(done); };
+        v.onplaying = done;
+        v.play().catch(function(){});
+        setTimeout(function(){
+          if(camStream && !v.videoWidth){ $("camMsg").innerHTML = "映像が出ません。下の「標準カメラで撮る」を押してください。"; }
+        }, 4000);
+      }).catch(function(err){ lastErr = err; attempt(i + 1); });
+    }
+    attempt(0);
+  }
+  function failCamera(err){
+    var name = err && err.name ? err.name : "不明";
+    var tip = (name === "NotAllowedError" || name === "SecurityError") ? "カメラの許可がOFFです。アドレスバー左の鍵マーク→権限→カメラを「許可」にしてください。" : (name === "NotReadableError" ? "他のアプリがカメラを使用中です。他のアプリを閉じてください。" : "この端末ではアプリ内カメラが使えません。");
+    // 閉じずに、標準カメラへ切り替えるボタンを出す（ユーザーの操作でないとカメラが開かないため）
+    $("camOverlay").style.display = "flex";
+    $("camMsg").style.display = "block";
+    $("camMsg").textContent = "カメラを起動できませんでした（" + name + "）。" + tip;
   }
   function shoot(){
     var v = $("camVideo");
@@ -927,6 +950,7 @@
   $("camBtn").addEventListener("click", openCamera);
   $("camShot").addEventListener("click", shoot);
   $("camClose").addEventListener("click", closeCamera);
+  $("camNative").addEventListener("click", function(){ closeCamera(); $("camInput").click(); });
 
   // ---- ドロップダウンを自前で描画（端末標準の選択窓だと中国式の漢字字形になる端末があるため）----
   (function(){
