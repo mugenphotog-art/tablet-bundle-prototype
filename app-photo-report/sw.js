@@ -1,8 +1,13 @@
-const CACHE = "photo-report-v2";
+const CACHE = "photo-report-v3";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icon.svg"];
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
+  // cache:"reload" で、ブラウザの一時キャッシュ（古い版）を使わず必ず最新を取得する
+  e.waitUntil(
+    caches.open(CACHE)
+      .then((c) => Promise.all(FILES.map((f) => c.add(new Request(f, { cache: "reload" })))))
+      .then(() => self.skipWaiting())
+  );
 });
 self.addEventListener("activate", (e) => {
   e.waitUntil(
