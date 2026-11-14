@@ -1,6 +1,6 @@
 // 試作: アプリ本体をキャッシュして、電波がなくても開けるようにする
-const CACHE = "tablet-bundle-proto-v10";
-const FILES = ["./", "index.html", "app.js", "manifest.webmanifest", "icon.svg"];
+const CACHE = "tablet-bundle-proto-v11";
+const FILES = ["./", "index.html", "app.js", "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => Promise.all(FILES.map((f) => fetch(f, { cache: "reload" }).then((r) => c.put(f, r))))).then(() => self.skipWaiting()));
