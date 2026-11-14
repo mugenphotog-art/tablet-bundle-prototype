@@ -173,7 +173,6 @@
   @media screen{
     body.preview-mode .editor{display:none;}
     body.preview-mode .report{display:block;padding:20px 0 60px;}
-    body.preview-mode #reportPages{zoom:var(--pz,1);}
   }
 
   /* ===== 実印刷 ===== */
@@ -197,7 +196,7 @@
 <!-- ===================== 操作画面 ===================== -->
 <div class="editor">
   <div class="app-title">
-    📷 写真報告書 <span class="ver">0.1.16</span>
+    📷 写真報告書 <span class="ver">0.1.17</span>
     <small>写真を取り込み → 情報を入力 → PDF出力（印刷でPDF保存）</small>
     <span class="draft-note" id="draftNote"></span>
   </div>
@@ -792,22 +791,40 @@
     enforceOrder(); renderList();   // 出力前に必ず順序ルールを適用
     buildReport("fullUrl");
     document.body.classList.add("preview-mode");
-    pvFit = true; applyPvZoom();   // 既定は「1ページ全体が画面に収まる大きさ」
+    pvFit = true; applyPvZoom(); setTimeout(applyPvZoom, 300);   // 既定は「1ページ全体が画面に収まる大きさ」（アドレスバー等の変化にも追従）
     window.scrollTo(0,0);
   }
   // プレビューの表示倍率（画面表示だけ。印刷・PDFには影響しない）
   var pvFit = true;
   function applyPvZoom(){
-    var root = document.documentElement, btn = $("zoomBtn");
+    var root = document.documentElement, btn = $("zoomBtn"), box = $("reportPages");
     if(!document.body.classList.contains("preview-mode")){ return; }
-    if(!pvFit){ root.style.setProperty("--pz","1"); if(btn) btn.textContent = "全体を表示"; return; }
+    box.style.zoom = ""; box.style.transform = ""; box.style.marginBottom = "";
+    if(!pvFit){ if(btn) btn.textContent = "全体を表示"; return; }
+    if(btn) btn.textContent = "原寸で見る";
     var bar = document.querySelector(".preview-bar");
     var barH = bar ? bar.offsetHeight + 18 : 80;
-    var pw = 793.7, ph = 1122.5;                     // A4 (96dpi)
-    var z = Math.min((window.innerWidth - 16) / pw, (window.innerHeight - barH - 30) / ph, 1);
+    var vw = Math.min(window.innerWidth, root.clientWidth || 9999);
+    var vh = Math.min(window.innerHeight, root.clientHeight || 9999);
+    var availW = vw - 16, availH = vh - barH - 24;
+    var pg = box.querySelector(".report-page");
+    if(!pg) return;
+    var w0 = pg.getBoundingClientRect().width, h0 = pg.getBoundingClientRect().height;
+    var z = Math.min(availW / w0, availH / h0, 1);
     if(!(z > 0.2)) z = 0.2;
-    root.style.setProperty("--pz", String(z));
-    if(btn) btn.textContent = "原寸で見る";
+    if(z >= 0.999) return;
+    box.style.zoom = String(z);
+    var r = pg.getBoundingClientRect();
+    if(Math.abs(r.width - w0) < 2){     // zoomが効かない端末は transform で縮小
+      box.style.zoom = "";
+      box.style.transformOrigin = "top center";
+      box.style.transform = "scale(" + z + ")";
+      box.style.marginBottom = (-(box.offsetHeight * (1 - z))) + "px";
+      return;
+    }
+    // 実測して、まだはみ出していれば追加で縮める
+    var k = Math.min(availW / r.width, availH / r.height);
+    if(k < 0.995){ box.style.zoom = String(z * k); }
   }
   window.addEventListener("resize", applyPvZoom);
   window.addEventListener("orientationchange", function(){ setTimeout(applyPvZoom, 300); });
@@ -925,10 +942,10 @@
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block"; $("camMsg").textContent = "カメラを起動中…（許可の確認が出たら「許可」を押してください）";
     clearTimeout(camWait); camWait = setTimeout(function(){
-      if(!camStream){ $("camMsg").textContent = "カメラから応答がありません。下の「標準カメラで撮る」を押してください。（版 0.1.16）"; }
+      if(!camStream){ $("camMsg").textContent = "カメラから応答がありません。下の「標準カメラで撮る」を押してください。（版 0.1.17）"; }
     }, 8000);
     if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){
-      $("camMsg").textContent = "この画面（接続方式）ではアプリ内カメラが使えません。下の「標準カメラで撮る」を押してください。（版 0.1.16）"; return;
+      $("camMsg").textContent = "この画面（接続方式）ではアプリ内カメラが使えません。下の「標準カメラで撮る」を押してください。（版 0.1.17）"; return;
     }
     // 端末によって受け付ける条件が違うため、条件をゆるめながら順に試す
     var tries = [
@@ -962,7 +979,7 @@
     // 閉じずに、標準カメラへ切り替えるボタンを出す（ユーザーの操作でないとカメラが開かないため）
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block";
-    $("camMsg").textContent = "カメラを起動できませんでした（" + name + "）。" + tip + "（版 0.1.16）";
+    $("camMsg").textContent = "カメラを起動できませんでした（" + name + "）。" + tip + "（版 0.1.17）";
   }
   function shoot(){
     var v = $("camVideo");
@@ -982,7 +999,7 @@
     // 画面を先に描画させてからカメラを要求する（端末によってはカメラ要求中に画面が止まるため）
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block"; $("camMsg").textContent = "カメラを起動中…";
-    requestAnimationFrame(function(){ setTimeout(function(){ try{ openCamera(); }catch(e){ $("camMsg").textContent = "エラー: " + (e && e.message) + "（版 0.1.16）"; } }, 150); });
+    requestAnimationFrame(function(){ setTimeout(function(){ try{ openCamera(); }catch(e){ $("camMsg").textContent = "エラー: " + (e && e.message) + "（版 0.1.17）"; } }, 150); });
   });
   $("camShot").addEventListener("click", shoot);
   $("camClose").addEventListener("click", closeCamera);
