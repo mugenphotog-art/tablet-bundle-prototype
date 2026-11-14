@@ -173,6 +173,7 @@
   @media screen{
     body.preview-mode .editor{display:none;}
     body.preview-mode .report{display:block;padding:20px 0 60px;}
+    body.preview-mode #reportPages{zoom:var(--pz,1);}
   }
 
   /* ===== 実印刷 ===== */
@@ -196,7 +197,7 @@
 <!-- ===================== 操作画面 ===================== -->
 <div class="editor">
   <div class="app-title">
-    📷 写真報告書 <span class="ver">0.1.15</span>
+    📷 写真報告書 <span class="ver">0.1.16</span>
     <small>写真を取り込み → 情報を入力 → PDF出力（印刷でPDF保存）</small>
     <span class="draft-note" id="draftNote"></span>
   </div>
@@ -293,6 +294,7 @@
   <div class="preview-bar no-print">
     <button class="btn ghost" id="backBtn">← 編集に戻る</button>
     <button class="btn" id="printBtn2">印刷 / PDF保存</button>
+    <button class="btn ghost" id="zoomBtn" type="button">原寸で見る</button>
     <span class="hint" style="margin:0;">このプレビューがそのままPDFになります（A4）。</span>
   </div>
   <div id="reportPages"></div>
@@ -790,8 +792,25 @@
     enforceOrder(); renderList();   // 出力前に必ず順序ルールを適用
     buildReport("fullUrl");
     document.body.classList.add("preview-mode");
+    pvFit = true; applyPvZoom();   // 既定は「1ページ全体が画面に収まる大きさ」
     window.scrollTo(0,0);
   }
+  // プレビューの表示倍率（画面表示だけ。印刷・PDFには影響しない）
+  var pvFit = true;
+  function applyPvZoom(){
+    var root = document.documentElement, btn = $("zoomBtn");
+    if(!document.body.classList.contains("preview-mode")){ return; }
+    if(!pvFit){ root.style.setProperty("--pz","1"); if(btn) btn.textContent = "全体を表示"; return; }
+    var bar = document.querySelector(".preview-bar");
+    var barH = bar ? bar.offsetHeight + 18 : 80;
+    var pw = 793.7, ph = 1122.5;                     // A4 (96dpi)
+    var z = Math.min((window.innerWidth - 16) / pw, (window.innerHeight - barH - 30) / ph, 1);
+    if(!(z > 0.2)) z = 0.2;
+    root.style.setProperty("--pz", String(z));
+    if(btn) btn.textContent = "原寸で見る";
+  }
+  window.addEventListener("resize", applyPvZoom);
+  window.addEventListener("orientationchange", function(){ setTimeout(applyPvZoom, 300); });
   function backToEdit(){
     document.body.classList.remove("preview-mode");
   }
@@ -867,6 +886,7 @@
   }
 
   $("previewBtn").addEventListener("click", showPreview);
+  $("zoomBtn").addEventListener("click", function(){ pvFit = !pvFit; applyPvZoom(); });
   $("backBtn").addEventListener("click", backToEdit);
   $("printBtn").addEventListener("click", outputPrint);
   $("printBtn2").addEventListener("click", outputPrint);
@@ -905,10 +925,10 @@
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block"; $("camMsg").textContent = "カメラを起動中…（許可の確認が出たら「許可」を押してください）";
     clearTimeout(camWait); camWait = setTimeout(function(){
-      if(!camStream){ $("camMsg").textContent = "カメラから応答がありません。下の「標準カメラで撮る」を押してください。（版 0.1.15）"; }
+      if(!camStream){ $("camMsg").textContent = "カメラから応答がありません。下の「標準カメラで撮る」を押してください。（版 0.1.16）"; }
     }, 8000);
     if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){
-      $("camMsg").textContent = "この画面（接続方式）ではアプリ内カメラが使えません。下の「標準カメラで撮る」を押してください。（版 0.1.15）"; return;
+      $("camMsg").textContent = "この画面（接続方式）ではアプリ内カメラが使えません。下の「標準カメラで撮る」を押してください。（版 0.1.16）"; return;
     }
     // 端末によって受け付ける条件が違うため、条件をゆるめながら順に試す
     var tries = [
@@ -942,7 +962,7 @@
     // 閉じずに、標準カメラへ切り替えるボタンを出す（ユーザーの操作でないとカメラが開かないため）
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block";
-    $("camMsg").textContent = "カメラを起動できませんでした（" + name + "）。" + tip + "（版 0.1.15）";
+    $("camMsg").textContent = "カメラを起動できませんでした（" + name + "）。" + tip + "（版 0.1.16）";
   }
   function shoot(){
     var v = $("camVideo");
@@ -962,7 +982,7 @@
     // 画面を先に描画させてからカメラを要求する（端末によってはカメラ要求中に画面が止まるため）
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block"; $("camMsg").textContent = "カメラを起動中…";
-    requestAnimationFrame(function(){ setTimeout(function(){ try{ openCamera(); }catch(e){ $("camMsg").textContent = "エラー: " + (e && e.message) + "（版 0.1.15）"; } }, 150); });
+    requestAnimationFrame(function(){ setTimeout(function(){ try{ openCamera(); }catch(e){ $("camMsg").textContent = "エラー: " + (e && e.message) + "（版 0.1.16）"; } }, 150); });
   });
   $("camShot").addEventListener("click", shoot);
   $("camClose").addEventListener("click", closeCamera);
