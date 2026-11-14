@@ -74,6 +74,13 @@
   }
   input:focus,textarea:focus,select:focus{outline:2px solid #90caf9;border-color:var(--blue);}
   textarea{resize:vertical;min-height:38px;}
+  .dd{position:relative;width:100%;}
+  .dd-btn{width:100%;text-align:left;border:1px solid var(--line);border-radius:6px;padding:7px 9px;font-size:13px;font-family:inherit;background:#fff;cursor:pointer;color:inherit;}
+  .dd-list{position:absolute;left:0;right:0;top:100%;z-index:50;background:#fff;border:1px solid var(--blue);border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.2);margin-top:2px;}
+  .dd-item{padding:10px 12px;font-size:14px;cursor:pointer;border-bottom:1px solid #eee;}
+  .dd-item:last-child{border-bottom:0;}
+  .dd-item:hover{background:#e3f2fd;}
+  @media (pointer:coarse){.dd-btn{padding:11px 12px;font-size:16px;}.dd-item{padding:14px 14px;font-size:16px;}}
 
   .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
   .btn{
@@ -286,6 +293,17 @@
     <span class="hint" style="margin:0;">このプレビューがそのままPDFになります（A4）。</span>
   </div>
   <div id="reportPages"></div>
+</div>
+
+<!-- ===================== 連続撮影カメラ（撮影ボタン1回で保存） ===================== -->
+<div id="camOverlay" style="display:none;position:fixed;inset:0;z-index:100;background:#000;flex-direction:column;">
+  <video id="camVideo" playsinline muted autoplay style="flex:1 1 auto;min-height:0;width:100%;object-fit:contain;background:#000;"></video>
+  <div id="camFlash" style="position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s;"></div>
+  <div style="flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;background:#111;color:#fff;">
+    <button class="btn ghost" type="button" id="camClose" style="min-width:110px;">閉じる</button>
+    <button type="button" id="camShot" aria-label="撮影" style="width:76px;height:76px;border-radius:50%;border:6px solid #fff;background:#e53935;cursor:pointer;"></button>
+    <div id="camCount" style="min-width:110px;text-align:right;font-size:16px;font-weight:700;">0 枚撮影</div>
+  </div>
 </div>
 
 <script>
@@ -871,7 +889,71 @@
   });
 
   // ================= 端末内への自動保存（IndexedDB・サーバーなし） =================
-  $("camBtn").addEventListener("click", function(){ $("camInput").click(); });
+  // ---- 連続撮影：撮影ボタンを押すだけで即保存（確認のチェック操作なし）。閉じるまでカメラは開いたまま ----
+  var camStream = null, camShots = 0;
+  function closeCamera(){
+    if(camStream){ camStream.getTracks().forEach(function(t){ t.stop(); }); camStream = null; }
+    $("camVideo").srcObject = null;
+    $("camOverlay").style.display = "none";
+  }
+  function openCamera(){
+    if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){ $("camInput").click(); return; } // 非対応なら従来方式
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 2560 }, height: { ideal: 1440 } }, audio: false })
+      .then(function(s){
+        camStream = s; camShots = 0; $("camCount").textContent = "0 枚撮影";
+        $("camVideo").srcObject = s;
+        $("camOverlay").style.display = "flex";
+        $("camVideo").play().catch(function(){});
+      })
+      .catch(function(){
+        alert("カメラを使えませんでした。ブラウザのカメラ許可を確認してください。\n（このあと標準のカメラ画面に切り替えます）");
+        $("camInput").click();
+      });
+  }
+  function shoot(){
+    var v = $("camVideo");
+    if(!camStream || !v.videoWidth) return;
+    var c = document.createElement("canvas");
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext("2d").drawImage(v, 0, 0);
+    var f = $("camFlash"); f.style.transition = "none"; f.style.opacity = "0.8";
+    requestAnimationFrame(function(){ f.style.transition = "opacity .25s"; f.style.opacity = "0"; });
+    c.toBlob(function(b){
+      if(!b) return;
+      addFiles([new File([b], "camera-" + Date.now() + ".jpg", { type: "image/jpeg", lastModified: Date.now() })]);
+      camShots++; $("camCount").textContent = camShots + " 枚撮影";
+    }, "image/jpeg", 0.92);
+  }
+  $("camBtn").addEventListener("click", openCamera);
+  $("camShot").addEventListener("click", shoot);
+  $("camClose").addEventListener("click", closeCamera);
+
+  // ---- ドロップダウンを自前で描画（端末標準の選択窓だと中国式の漢字字形になる端末があるため）----
+  (function(){
+    var boxes = [];
+    function closeAll(except){ boxes.forEach(function(b){ if(b.list !== except) b.list.style.display = "none"; }); }
+    Array.prototype.forEach.call(document.querySelectorAll("select"), function(sel){
+      var wrap = document.createElement("div"); wrap.className = "dd"; wrap.lang = "ja";
+      var btn = document.createElement("button"); btn.type = "button"; btn.className = "dd-btn";
+      var list = document.createElement("div"); list.className = "dd-list"; list.style.display = "none";
+      sel.parentNode.insertBefore(wrap, sel); wrap.appendChild(btn); wrap.appendChild(list);
+      sel.style.display = "none"; // 値の管理は元の select のまま
+      Array.prototype.forEach.call(sel.options, function(o){
+        var it = document.createElement("div"); it.className = "dd-item"; it.textContent = o.textContent;
+        it.addEventListener("click", function(e){
+          e.stopPropagation();
+          sel.value = o.value; list.style.display = "none"; label();
+          sel.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+        list.appendChild(it);
+      });
+      function label(){ var o = sel.options[sel.selectedIndex]; var t = o ? o.textContent : ""; if(btn.textContent !== t + " ▾") btn.textContent = t + " ▾"; }
+      btn.addEventListener("click", function(e){ e.stopPropagation(); var open = list.style.display === "block"; closeAll(); list.style.display = open ? "none" : "block"; });
+      boxes.push({ list: list, label: label }); label();
+    });
+    document.addEventListener("click", function(){ closeAll(); });
+    setInterval(function(){ boxes.forEach(function(b){ b.label(); }); }, 300); // プログラムによる値の変更を表示へ反映
+  })();
   $("camInput").addEventListener("change", function(e){ addFiles(e.target.files); e.target.value=""; });
 
   var FIELDS = ["repTitleSelect","repTitleCustom","repDate","propName","company","summary","layout"];
