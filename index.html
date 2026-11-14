@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>現場記録（試作）</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#1f6f5c">
+<style>
+  :root { --fg:#1c2421; --bg:#f6f8f7; --card:#fff; --accent:#1f6f5c; --warn:#b4540a; --line:#d5dcd9; --fs:18px; }
+  :root.large { --fs:22px; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, "Hiragino Sans", "Yu Gothic UI", sans-serif; font-size:var(--fs); color:var(--fg); background:var(--bg); }
+  header { display:flex; align-items:center; gap:12px; padding:12px 16px; background:var(--accent); color:#fff; position:sticky; top:0; z-index:5; }
+  header h1 { font-size:1.1em; margin:0; flex:1; }
+  .badge { font-size:.8em; padding:4px 10px; border-radius:999px; background:#ffffff33; }
+  .badge.off { background:var(--warn); }
+  main { max-width:760px; margin:0 auto; padding:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px; }
+  button, .btn { font:inherit; min-height:52px; min-width:52px; padding:10px 18px; border-radius:10px; border:1px solid var(--accent); background:var(--accent); color:#fff; cursor:pointer; }
+  button.sub { background:#fff; color:var(--accent); }
+  button:disabled { opacity:.5; cursor:default; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  label.check { display:flex; align-items:center; gap:12px; min-height:52px; border-bottom:1px solid var(--line); }
+  label.check input { width:28px; height:28px; }
+  textarea { width:100%; font:inherit; min-height:80px; padding:8px; border:1px solid var(--line); border-radius:8px; }
+  .thumbs { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .thumbs img { width:96px; height:96px; object-fit:cover; border-radius:8px; border:1px solid var(--line); }
+  .muted { color:#5b6762; font-size:.85em; }
+  .err { color:var(--warn); }
+  .empty { text-align:center; padding:28px 8px; color:#5b6762; }
+  h2 { font-size:1.05em; margin:4px 0 10px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>現場記録（試作）</h1>
+  <span id="net" class="badge">オンライン</span>
+  <button id="size" class="sub" style="min-height:40px;padding:4px 12px">文字 大</button>
+</header>
+<main>
+  <section id="home">
+    <div class="card">
+      <h2>新しい記録を作る</h2>
+      <div class="row" id="templates"></div>
+    </div>
+    <div class="card">
+      <h2>保存した記録</h2>
+      <div id="list"></div>
+    </div>
+    <div class="card muted" id="storage">保存領域を確認中…</div>
+  </section>
+
+  <section id="edit" hidden>
+    <div class="card">
+      <h2 id="editTitle"></h2>
+      <div id="items"></div>
+      <h2 style="margin-top:14px">写真</h2>
+      <div class="row">
+        <label class="btn sub" for="photo">写真を撮る・選ぶ</label>
+        <input id="photo" type="file" accept="image/*" capture="environment" multiple hidden>
+      </div>
+      <div class="thumbs" id="thumbs"></div>
+      <h2 style="margin-top:14px">備考</h2>
+      <textarea id="note" placeholder="気づいたことを書く"></textarea>
+    </div>
+    <div class="row">
+      <button id="save">保存する</button>
+      <button id="cancel" class="sub">戻る</button>
+      <span id="msg" class="muted" role="status"></span>
+    </div>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
