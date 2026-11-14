@@ -26,6 +26,8 @@
   .defco{display:flex;gap:10px;align-items:center;margin-top:6px;flex-wrap:wrap;}
   .defco span{font-size:12px;color:var(--muted);}
   .draft-note{font-size:12px;color:var(--muted);margin-left:8px;}
+  .clear-btn{background:#ffd600;color:#1f2328;border:2px solid #f9a825;border-radius:8px;padding:10px 16px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-left:12px;}
+  .clear-btn:active{background:#ffea00;}
   :root{
     --blue:#1565c0;
     --blue-d:#0d47a1;
@@ -179,7 +181,7 @@
 
   /* ===== 実印刷 ===== */
   @media print{
-    @page{size:A4;margin:0;}
+    @page{size:210mm 297mm portrait;margin:0;}
     body{background:#fff;}
     .editor,.preview-bar,.no-print{display:none !important;}
     .report{display:block !important;}
@@ -201,9 +203,10 @@
 <!-- ===================== 操作画面 ===================== -->
 <div class="editor">
   <div class="app-title">
-    📷 写真報告書 <span class="ver">0.1.19</span>
+    📷 写真報告書 <span class="ver">0.1.21</span>
     <small>写真を取り込み → 情報を入力 → PDF出力（印刷でPDF保存）</small>
     <span class="draft-note" id="draftNote"></span>
+    <button type="button" id="clearBtn" class="clear-btn">前回の記録を消す</button>
   </div>
 
   <!-- 案件情報 -->
@@ -299,7 +302,7 @@
     <button class="btn ghost" id="backBtn">← 編集に戻る</button>
     <button class="btn" id="printBtn2">印刷 / PDF保存</button>
     <button class="btn ghost" id="zoomBtn" type="button">原寸で見る</button>
-    <span class="hint" style="margin:0;">このプレビューがそのままPDFになります（A4）。</span>
+    <span class="hint" style="margin:0;">このプレビューがそのままPDFになります（A4・縦）。印刷画面で用紙サイズが「A4」になっているか確認してください。</span>
   </div>
   <div id="reportPages"></div>
 </div>
@@ -956,10 +959,10 @@
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block"; $("camMsg").textContent = "カメラを起動中…（許可の確認が出たら「許可」を押してください）";
     clearTimeout(camWait); camWait = setTimeout(function(){
-      if(!camStream){ $("camMsg").textContent = "カメラから応答がありません。下の「標準カメラで撮る」を押してください。（版 0.1.19）"; }
+      if(!camStream){ $("camMsg").textContent = "カメラから応答がありません。下の「標準カメラで撮る」を押してください。（版 0.1.21）"; }
     }, 8000);
     if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){
-      $("camMsg").textContent = "この画面（接続方式）ではアプリ内カメラが使えません。下の「標準カメラで撮る」を押してください。（版 0.1.19）"; return;
+      $("camMsg").textContent = "この画面（接続方式）ではアプリ内カメラが使えません。下の「標準カメラで撮る」を押してください。（版 0.1.21）"; return;
     }
     // 端末によって受け付ける条件が違うため、条件をゆるめながら順に試す
     var tries = [
@@ -993,7 +996,7 @@
     // 閉じずに、標準カメラへ切り替えるボタンを出す（ユーザーの操作でないとカメラが開かないため）
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block";
-    $("camMsg").textContent = "カメラを起動できませんでした（" + name + "）。" + tip + "（版 0.1.19）";
+    $("camMsg").textContent = "カメラを起動できませんでした（" + name + "）。" + tip + "（版 0.1.21）";
   }
   function shoot(){
     var v = $("camVideo");
@@ -1013,7 +1016,7 @@
     // 画面を先に描画させてからカメラを要求する（端末によってはカメラ要求中に画面が止まるため）
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block"; $("camMsg").textContent = "カメラを起動中…";
-    requestAnimationFrame(function(){ setTimeout(function(){ try{ openCamera(); }catch(e){ $("camMsg").textContent = "エラー: " + (e && e.message) + "（版 0.1.19）"; } }, 150); });
+    requestAnimationFrame(function(){ setTimeout(function(){ try{ openCamera(); }catch(e){ $("camMsg").textContent = "エラー: " + (e && e.message) + "（版 0.1.21）"; } }, 150); });
   });
   $("camShot").addEventListener("click", shoot);
   $("camClose").addEventListener("click", closeCamera);
@@ -1114,16 +1117,24 @@
     });
   }
 
-  $("newBtn").addEventListener("click", function(){
-    if(!confirm("今の報告書の内容（写真・入力）をすべて消して、新しく始めますか？\n（元に戻せません）")) return;
+  // 前回の記録（写真・入力）をすべて消す。報告書タイトル・会社名はデフォルト登録の内容に戻す（登録自体は消さない）
+  function clearAllRecords(){
+    if(!confirm("前回までの記録（入力した内容・取り込んだ写真）をすべて消します。\n報告書タイトルと会社名は、デフォルト登録の内容に戻ります。\n（元に戻せません）\n\nよろしいですか？")) return;
     photos = []; nextId = 1; seqCounter = 0;
     ["repTitleCustom","propName","summary"].forEach(function(id){ $(id).value = ""; });
     $("repTitleSelect").value = "施工写真報告書"; $("repTitleCustom").style.display = "none";
     applyDefaultTitle();
+    $("company").value = getDefCo();
+    var d = new Date();
+    $("repDate").value = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+    syncDateUI();
     clearTimeout(saveTimer);
-    dbPut(null).then(function(){ note("新しい報告書を始めました"); });
+    dbPut(null).then(function(){ note("前回の記録を消しました"); });
     renderList();
-  });
+    window.scrollTo(0,0);
+  }
+  $("newBtn").addEventListener("click", clearAllRecords);
+  $("clearBtn").addEventListener("click", clearAllRecords);
 
   // ---- 報告日：年・月・日の順に選ぶ（端末の表示順に左右されない） ----
   // カレンダーで選ぶ。端末による表示順の違いに左右されないよう、下に「年月日」で必ず表示する
