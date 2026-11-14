@@ -275,5 +275,9 @@ $("size").onclick = () => { const l = document.documentElement.classList.toggle(
   renderNet(); renderTemplates();
   try { db = await openDb(); await renderList(); await renderMemos(); await renderStorage(); }
   catch { $("list").innerHTML = '<div class="empty err">この端末では記録を保存できません。ブラウザの設定（プライベートモード等）を確認してください。</div>'; }
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  if ("serviceWorker" in navigator) {
+    const had = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener("controllerchange", () => { if (had) location.reload(); });
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
 })();
