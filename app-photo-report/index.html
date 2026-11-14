@@ -195,7 +195,7 @@
 <!-- ===================== 操作画面 ===================== -->
 <div class="editor">
   <div class="app-title">
-    📷 写真報告書 <span class="ver">0.1.11</span>
+    📷 写真報告書 <span class="ver">0.1.12</span>
     <small>写真を取り込み → 情報を入力 → PDF出力（印刷でPDF保存）</small>
     <span class="draft-note" id="draftNote"></span>
   </div>
@@ -235,7 +235,6 @@
       <p style="margin:0 0 8px;font-size:15px;"><strong>ここに写真をドラッグ＆ドロップ</strong></p>
       <p style="margin:0 0 12px;">または</p>
       <button class="btn" type="button" id="camBtn">📷 カメラで撮影</button>
-      <button class="btn ghost" type="button" id="camBtn2">連続撮影（試験中）</button>
       <button class="btn ghost" type="button" id="pickBtn">ファイルを選択（複数可）</button>
       <input type="file" id="fileInput" accept="image/*" multiple hidden>
       <input type="file" id="camInput" accept="image/*" capture="environment" hidden>
@@ -905,10 +904,10 @@
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block"; $("camMsg").textContent = "カメラを起動中…（許可の確認が出たら「許可」を押してください）";
     clearTimeout(camWait); camWait = setTimeout(function(){
-      if(!camStream){ $("camMsg").textContent = "カメラから応答がありません。下の「標準カメラで撮る」を押してください。（版 0.1.11）"; }
+      if(!camStream){ $("camMsg").textContent = "カメラから応答がありません。下の「標準カメラで撮る」を押してください。（版 0.1.12）"; }
     }, 8000);
     if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){
-      $("camMsg").textContent = "この画面（接続方式）ではアプリ内カメラが使えません。下の「標準カメラで撮る」を押してください。（版 0.1.11）"; return;
+      $("camMsg").textContent = "この画面（接続方式）ではアプリ内カメラが使えません。下の「標準カメラで撮る」を押してください。（版 0.1.12）"; return;
     }
     // 端末によって受け付ける条件が違うため、条件をゆるめながら順に試す
     var tries = [
@@ -942,7 +941,7 @@
     // 閉じずに、標準カメラへ切り替えるボタンを出す（ユーザーの操作でないとカメラが開かないため）
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block";
-    $("camMsg").textContent = "カメラを起動できませんでした（" + name + "）。" + tip + "（版 0.1.11）";
+    $("camMsg").textContent = "カメラを起動できませんでした（" + name + "）。" + tip + "（版 0.1.12）";
   }
   function shoot(){
     var v = $("camVideo");
@@ -958,12 +957,11 @@
       camShots++; $("camCount").textContent = camShots + " 枚撮影";
     }, "image/jpeg", 0.92);
   }
-  $("camBtn").addEventListener("click", function(){ $("camInput").click(); }); // 標準カメラ（確実に動く方式）
-  $("camBtn2").addEventListener("click", function(){
+  $("camBtn").addEventListener("click", function(){ // 連続撮影（撮影ボタン1回で保存）
     // 画面を先に描画させてからカメラを要求する（端末によってはカメラ要求中に画面が止まるため）
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block"; $("camMsg").textContent = "カメラを起動中…";
-    requestAnimationFrame(function(){ setTimeout(function(){ try{ openCamera(); }catch(e){ $("camMsg").textContent = "エラー: " + (e && e.message) + "（版 0.1.11）"; } }, 150); });
+    requestAnimationFrame(function(){ setTimeout(function(){ try{ openCamera(); }catch(e){ $("camMsg").textContent = "エラー: " + (e && e.message) + "（版 0.1.12）"; } }, 150); });
   });
   $("camShot").addEventListener("click", shoot);
   $("camClose").addEventListener("click", closeCamera);
