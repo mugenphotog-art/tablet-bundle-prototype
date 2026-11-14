@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
 <title>写真報告書</title>
 <meta name="theme-color" content="#1565c0">
 <link rel="manifest" href="manifest.webmanifest">
@@ -173,6 +173,8 @@
   @media screen{
     body.preview-mode .editor{display:none;}
     body.preview-mode .report{display:block;padding:20px 0 60px;}
+    body.preview-mode{overflow-x:hidden;}
+    body.preview-mode .report{overflow-x:hidden;}
   }
 
   /* ===== 実印刷 ===== */
@@ -196,7 +198,7 @@
 <!-- ===================== 操作画面 ===================== -->
 <div class="editor">
   <div class="app-title">
-    📷 写真報告書 <span class="ver">0.1.17</span>
+    📷 写真報告書 <span class="ver">0.1.18</span>
     <small>写真を取り込み → 情報を入力 → PDF出力（印刷でPDF保存）</small>
     <span class="draft-note" id="draftNote"></span>
   </div>
@@ -799,7 +801,7 @@
   function applyPvZoom(){
     var root = document.documentElement, btn = $("zoomBtn"), box = $("reportPages");
     if(!document.body.classList.contains("preview-mode")){ return; }
-    box.style.zoom = ""; box.style.transform = ""; box.style.marginBottom = "";
+    box.style.zoom = ""; box.style.transform = ""; box.style.marginBottom = ""; box.style.position = "relative"; box.style.left = "0px";
     if(!pvFit){ if(btn) btn.textContent = "全体を表示"; return; }
     if(btn) btn.textContent = "原寸で見る";
     var bar = document.querySelector(".preview-bar");
@@ -820,11 +822,20 @@
       box.style.transformOrigin = "top center";
       box.style.transform = "scale(" + z + ")";
       box.style.marginBottom = (-(box.offsetHeight * (1 - z))) + "px";
+      centerPv(pg, 1);
       return;
     }
     // 実測して、まだはみ出していれば追加で縮める
     var k = Math.min(availW / r.width, availH / r.height);
     if(k < 0.995){ box.style.zoom = String(z * k); }
+    centerPv(pg, parseFloat(box.style.zoom) || 1);
+  }
+  // ページを画面の左右中央に寄せる（左に余白が偏るのを補正）
+  function centerPv(pg, zf){
+    var box = $("reportPages"), cw = document.documentElement.clientWidth || window.innerWidth;
+    var r = pg.getBoundingClientRect();
+    var delta = (cw - r.width) / 2 - r.left;
+    if(Math.abs(delta) > 1){ box.style.left = (delta / zf) + "px"; }
   }
   window.addEventListener("resize", applyPvZoom);
   window.addEventListener("orientationchange", function(){ setTimeout(applyPvZoom, 300); });
@@ -942,10 +953,10 @@
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block"; $("camMsg").textContent = "カメラを起動中…（許可の確認が出たら「許可」を押してください）";
     clearTimeout(camWait); camWait = setTimeout(function(){
-      if(!camStream){ $("camMsg").textContent = "カメラから応答がありません。下の「標準カメラで撮る」を押してください。（版 0.1.17）"; }
+      if(!camStream){ $("camMsg").textContent = "カメラから応答がありません。下の「標準カメラで撮る」を押してください。（版 0.1.18）"; }
     }, 8000);
     if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){
-      $("camMsg").textContent = "この画面（接続方式）ではアプリ内カメラが使えません。下の「標準カメラで撮る」を押してください。（版 0.1.17）"; return;
+      $("camMsg").textContent = "この画面（接続方式）ではアプリ内カメラが使えません。下の「標準カメラで撮る」を押してください。（版 0.1.18）"; return;
     }
     // 端末によって受け付ける条件が違うため、条件をゆるめながら順に試す
     var tries = [
@@ -979,7 +990,7 @@
     // 閉じずに、標準カメラへ切り替えるボタンを出す（ユーザーの操作でないとカメラが開かないため）
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block";
-    $("camMsg").textContent = "カメラを起動できませんでした（" + name + "）。" + tip + "（版 0.1.17）";
+    $("camMsg").textContent = "カメラを起動できませんでした（" + name + "）。" + tip + "（版 0.1.18）";
   }
   function shoot(){
     var v = $("camVideo");
@@ -999,7 +1010,7 @@
     // 画面を先に描画させてからカメラを要求する（端末によってはカメラ要求中に画面が止まるため）
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block"; $("camMsg").textContent = "カメラを起動中…";
-    requestAnimationFrame(function(){ setTimeout(function(){ try{ openCamera(); }catch(e){ $("camMsg").textContent = "エラー: " + (e && e.message) + "（版 0.1.17）"; } }, 150); });
+    requestAnimationFrame(function(){ setTimeout(function(){ try{ openCamera(); }catch(e){ $("camMsg").textContent = "エラー: " + (e && e.message) + "（版 0.1.18）"; } }, 150); });
   });
   $("camShot").addEventListener("click", shoot);
   $("camClose").addEventListener("click", closeCamera);
