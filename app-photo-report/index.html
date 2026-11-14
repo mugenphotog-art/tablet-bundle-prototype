@@ -195,7 +195,7 @@
 <!-- ===================== 操作画面 ===================== -->
 <div class="editor">
   <div class="app-title">
-    📷 写真報告書 <span class="ver">0.1.12</span>
+    📷 写真報告書 <span class="ver">0.1.13</span>
     <small>写真を取り込み → 情報を入力 → PDF出力（印刷でPDF保存）</small>
     <span class="draft-note" id="draftNote"></span>
   </div>
@@ -302,10 +302,10 @@
   <video id="camVideo" playsinline muted autoplay style="flex:1 1 auto;min-height:0;width:100%;object-fit:contain;background:#000;"></video>
   <div id="camMsg" style="display:none;position:absolute;left:16px;right:16px;top:30%;padding:14px;background:rgba(0,0,0,.75);color:#fff;border-radius:8px;font-size:16px;line-height:1.6;text-align:center;z-index:2;"></div>
   <div id="camFlash" style="position:absolute;top:0;left:0;right:0;bottom:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s;"></div>
-  <div style="flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;background:#111;color:#fff;">
-    <div style="display:flex;flex-direction:column;gap:6px;"><button class="btn ghost" type="button" id="camClose" style="min-width:110px;">閉じる</button><button class="btn ghost" type="button" id="camNative" style="min-width:110px;">標準カメラで撮る</button></div>
-    <button type="button" id="camShot" aria-label="撮影" style="width:76px;height:76px;border-radius:50%;border:6px solid #fff;background:#e53935;cursor:pointer;"></button>
-    <div id="camCount" style="min-width:110px;text-align:right;font-size:16px;font-weight:700;">0 枚撮影</div>
+  <div style="flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 12px;background:#111;color:#fff;">
+    <div style="display:flex;flex-direction:row;gap:6px;flex:1 1 0;"><button class="btn ghost" type="button" id="camClose" style="padding:6px 10px;font-size:13px;white-space:nowrap;">閉じる</button><button class="btn ghost" type="button" id="camNative" style="padding:6px 10px;font-size:13px;white-space:nowrap;">標準カメラ</button></div>
+    <button type="button" id="camShot" aria-label="撮影" style="width:54px;height:54px;border-radius:50%;border:4px solid #fff;background:#e53935;cursor:pointer;flex:0 0 auto;"></button>
+    <div id="camCount" style="flex:1 1 0;text-align:right;font-size:14px;font-weight:700;">0 枚撮影</div>
   </div>
 </div>
 
@@ -904,10 +904,10 @@
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block"; $("camMsg").textContent = "カメラを起動中…（許可の確認が出たら「許可」を押してください）";
     clearTimeout(camWait); camWait = setTimeout(function(){
-      if(!camStream){ $("camMsg").textContent = "カメラから応答がありません。下の「標準カメラで撮る」を押してください。（版 0.1.12）"; }
+      if(!camStream){ $("camMsg").textContent = "カメラから応答がありません。下の「標準カメラで撮る」を押してください。（版 0.1.13）"; }
     }, 8000);
     if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){
-      $("camMsg").textContent = "この画面（接続方式）ではアプリ内カメラが使えません。下の「標準カメラで撮る」を押してください。（版 0.1.12）"; return;
+      $("camMsg").textContent = "この画面（接続方式）ではアプリ内カメラが使えません。下の「標準カメラで撮る」を押してください。（版 0.1.13）"; return;
     }
     // 端末によって受け付ける条件が違うため、条件をゆるめながら順に試す
     var tries = [
@@ -941,7 +941,7 @@
     // 閉じずに、標準カメラへ切り替えるボタンを出す（ユーザーの操作でないとカメラが開かないため）
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block";
-    $("camMsg").textContent = "カメラを起動できませんでした（" + name + "）。" + tip + "（版 0.1.12）";
+    $("camMsg").textContent = "カメラを起動できませんでした（" + name + "）。" + tip + "（版 0.1.13）";
   }
   function shoot(){
     var v = $("camVideo");
@@ -961,7 +961,7 @@
     // 画面を先に描画させてからカメラを要求する（端末によってはカメラ要求中に画面が止まるため）
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block"; $("camMsg").textContent = "カメラを起動中…";
-    requestAnimationFrame(function(){ setTimeout(function(){ try{ openCamera(); }catch(e){ $("camMsg").textContent = "エラー: " + (e && e.message) + "（版 0.1.12）"; } }, 150); });
+    requestAnimationFrame(function(){ setTimeout(function(){ try{ openCamera(); }catch(e){ $("camMsg").textContent = "エラー: " + (e && e.message) + "（版 0.1.13）"; } }, 150); });
   });
   $("camShot").addEventListener("click", shoot);
   $("camClose").addEventListener("click", closeCamera);

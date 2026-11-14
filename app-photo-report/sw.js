@@ -1,4 +1,4 @@
-const CACHE = "photo-report-v12";
+const CACHE = "photo-report-v13";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icon.svg"];
 
 self.addEventListener("install", (e) => {
