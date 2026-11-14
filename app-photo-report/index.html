@@ -6,7 +6,8 @@
 <title>写真報告書</title>
 <meta name="theme-color" content="#1565c0">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
   /* タブレット（指操作）向け：押しやすい大きさにする */
   @media (pointer:coarse){
@@ -195,7 +196,7 @@
 <!-- ===================== 操作画面 ===================== -->
 <div class="editor">
   <div class="app-title">
-    📷 写真報告書 <span class="ver">0.1.13</span>
+    📷 写真報告書 <span class="ver">0.1.14</span>
     <small>写真を取り込み → 情報を入力 → PDF出力（印刷でPDF保存）</small>
     <span class="draft-note" id="draftNote"></span>
   </div>
@@ -904,10 +905,10 @@
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block"; $("camMsg").textContent = "カメラを起動中…（許可の確認が出たら「許可」を押してください）";
     clearTimeout(camWait); camWait = setTimeout(function(){
-      if(!camStream){ $("camMsg").textContent = "カメラから応答がありません。下の「標準カメラで撮る」を押してください。（版 0.1.13）"; }
+      if(!camStream){ $("camMsg").textContent = "カメラから応答がありません。下の「標準カメラで撮る」を押してください。（版 0.1.14）"; }
     }, 8000);
     if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){
-      $("camMsg").textContent = "この画面（接続方式）ではアプリ内カメラが使えません。下の「標準カメラで撮る」を押してください。（版 0.1.13）"; return;
+      $("camMsg").textContent = "この画面（接続方式）ではアプリ内カメラが使えません。下の「標準カメラで撮る」を押してください。（版 0.1.14）"; return;
     }
     // 端末によって受け付ける条件が違うため、条件をゆるめながら順に試す
     var tries = [
@@ -941,7 +942,7 @@
     // 閉じずに、標準カメラへ切り替えるボタンを出す（ユーザーの操作でないとカメラが開かないため）
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block";
-    $("camMsg").textContent = "カメラを起動できませんでした（" + name + "）。" + tip + "（版 0.1.13）";
+    $("camMsg").textContent = "カメラを起動できませんでした（" + name + "）。" + tip + "（版 0.1.14）";
   }
   function shoot(){
     var v = $("camVideo");
@@ -961,7 +962,7 @@
     // 画面を先に描画させてからカメラを要求する（端末によってはカメラ要求中に画面が止まるため）
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block"; $("camMsg").textContent = "カメラを起動中…";
-    requestAnimationFrame(function(){ setTimeout(function(){ try{ openCamera(); }catch(e){ $("camMsg").textContent = "エラー: " + (e && e.message) + "（版 0.1.13）"; } }, 150); });
+    requestAnimationFrame(function(){ setTimeout(function(){ try{ openCamera(); }catch(e){ $("camMsg").textContent = "エラー: " + (e && e.message) + "（版 0.1.14）"; } }, 150); });
   });
   $("camShot").addEventListener("click", shoot);
   $("camClose").addEventListener("click", closeCamera);

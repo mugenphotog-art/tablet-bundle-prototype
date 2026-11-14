@@ -1,5 +1,5 @@
-const CACHE = "photo-report-v13";
-const FILES = ["./", "index.html", "manifest.webmanifest", "icon.svg"];
+const CACHE = "photo-report-v14";
+const FILES = ["./", "index.html", "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", (e) => {
   // cache:"reload" で、ブラウザの一時キャッシュ（古い版）を使わず必ず最新を取得する
