@@ -31,6 +31,21 @@
   .err { color:var(--warn); }
   .empty { text-align:center; padding:28px 8px; color:#5b6762; }
   h2 { font-size:1.05em; margin:4px 0 10px; }
+  select { font:inherit; min-height:52px; padding:6px 10px; border:1px solid var(--line); border-radius:8px; max-width:100%; }
+  .chkrow { display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px; border-bottom:1px solid var(--line); }
+  .chkrow label.check { flex:1 1 230px; border-bottom:0; font-size:.82em; min-height:48px; }
+  .chkrow label.check input { width:24px; height:24px; }
+  .chkrow label.abn { display:flex; align-items:center; gap:6px; font-size:.82em; color:var(--warn); white-space:nowrap; min-height:48px; }
+  .chkrow label.abn input { width:24px; height:24px; }
+  .chkrow input.abnNote { flex:1 1 180px; min-width:0; font:inherit; font-size:.82em; min-height:44px; padding:4px 8px; border:1px solid var(--line); border-radius:8px; }
+  .chkrow.bad { background:#fff4e8; }
+  h3.cat { font-size:.95em; margin:14px 0 2px; padding:4px 10px; background:#e3ebe8; border-radius:6px; color:var(--accent); }
+  .memo { border:1px solid var(--line); border-radius:10px; padding:10px; margin-bottom:8px; }
+  .memo.contact { border-left:6px solid var(--warn); }
+  .memo.done { opacity:.6; }
+  .tag { font-size:.75em; padding:2px 8px; border-radius:999px; background:#e3ebe8; margin-right:6px; }
+  .tag.contact { background:var(--warn); color:#fff; }
+  .memo .txt { white-space:pre-wrap; margin:6px 0; }
 </style>
 </head>
 <body>
@@ -48,6 +63,21 @@
     <div class="card">
       <h2>保存した記録</h2>
       <div id="list"></div>
+    </div>
+    <div class="card" id="memoCard">
+      <h2>メモ・連絡</h2>
+      <div class="row" style="margin-bottom:8px">
+        <label><input type="radio" name="memoKind" value="memo" checked> メモ</label>
+        <label><input type="radio" name="memoKind" value="contact"> 連絡（申し送り・対応が必要）</label>
+      </div>
+      <textarea id="memoText" placeholder="メモや連絡内容を書く"></textarea>
+      <div class="row" style="margin-top:8px">
+        <label for="memoLink" class="muted">紐付ける記録</label>
+        <select id="memoLink"></select>
+        <button id="memoAdd">メモを追加</button>
+        <span id="memoMsg" class="muted" role="status"></span>
+      </div>
+      <div id="memoList" style="margin-top:12px"></div>
     </div>
     <div class="card muted" id="storage">保存領域を確認中…</div>
   </section>
