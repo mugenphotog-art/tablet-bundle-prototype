@@ -24,7 +24,7 @@
   .datesel select{width:auto;flex:1 1 auto;min-width:72px;}
   .defco{display:flex;gap:10px;align-items:center;margin-top:6px;flex-wrap:wrap;}
   .defco span{font-size:12px;color:var(--muted);}
-  .draft-note{font-size:12px;color:var(--muted);margin-left:auto;}
+  .draft-note{font-size:12px;color:var(--muted);margin-left:8px;}
   :root{
     --blue:#1565c0;
     --blue-d:#0d47a1;
@@ -45,12 +45,14 @@
 
   /* ===== 操作画面（画面のみ） ===== */
   .editor{max-width:1080px;margin:0 auto;padding:20px 24px 80px;}
-  .app-title{
+  .app-title{flex-wrap:wrap;
     display:flex;align-items:center;gap:10px;
-    font-size:22px;font-weight:700;color:var(--blue-d);
-    border-bottom:3px solid var(--blue);padding-bottom:12px;margin-bottom:18px;
+    font-size:22px;font-weight:700;color:#fff;
+    background:var(--blue);border-radius:8px;padding:14px 18px;margin-bottom:18px;
   }
-  .app-title small{font-size:13px;font-weight:400;color:var(--muted);}
+  .app-title small{font-size:12px;font-weight:400;color:#fff;margin-left:auto;text-align:right;}
+  .app-title .ver{font-size:12px;font-weight:400;color:#fff;}
+  .app-title .draft-note{color:#fff;}
 
   .card{
     background:#fff;border:1px solid var(--line);border-radius:10px;
@@ -193,7 +195,7 @@
 <!-- ===================== 操作画面 ===================== -->
 <div class="editor">
   <div class="app-title">
-    📷 写真報告書
+    📷 写真報告書 <span class="ver">0.1.9</span>
     <small>写真を取り込み → 情報を入力 → PDF出力（印刷でPDF保存）</small>
     <span class="draft-note" id="draftNote"></span>
   </div>
@@ -902,10 +904,10 @@
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block"; $("camMsg").textContent = "カメラを起動中…（許可の確認が出たら「許可」を押してください）";
     clearTimeout(camWait); camWait = setTimeout(function(){
-      if(!camStream){ $("camMsg").textContent = "カメラから応答がありません。下の「標準カメラで撮る」を押してください。（版 v8）"; }
+      if(!camStream){ $("camMsg").textContent = "カメラから応答がありません。下の「標準カメラで撮る」を押してください。（版 0.1.9）"; }
     }, 8000);
     if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){
-      $("camMsg").textContent = "この画面（接続方式）ではアプリ内カメラが使えません。下の「標準カメラで撮る」を押してください。（版 v8）"; return;
+      $("camMsg").textContent = "この画面（接続方式）ではアプリ内カメラが使えません。下の「標準カメラで撮る」を押してください。（版 0.1.9）"; return;
     }
     // 端末によって受け付ける条件が違うため、条件をゆるめながら順に試す
     var tries = [
@@ -939,7 +941,7 @@
     // 閉じずに、標準カメラへ切り替えるボタンを出す（ユーザーの操作でないとカメラが開かないため）
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block";
-    $("camMsg").textContent = "カメラを起動できませんでした（" + name + "）。" + tip + "（版 v8）";
+    $("camMsg").textContent = "カメラを起動できませんでした（" + name + "）。" + tip + "（版 0.1.9）";
   }
   function shoot(){
     var v = $("camVideo");
@@ -1116,7 +1118,12 @@
     if(navigator.storage && navigator.storage.persist){ navigator.storage.persist().catch(function(){}); }
   });
 
-  if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(function(){}); }
+  if("serviceWorker" in navigator){
+    var hadCtl = !!navigator.serviceWorker.controller;
+    // 新しい版に切り替わったら自動で読み込み直す（入力中の内容は自動保存済み）
+    navigator.serviceWorker.addEventListener("controllerchange", function(){ if(hadCtl && !window.__reloaded){ window.__reloaded = true; location.reload(); } });
+    navigator.serviceWorker.register("sw.js").then(function(r){ r.update(); }).catch(function(){});
+  }
 })();
 </script>
 </body>
