@@ -183,6 +183,9 @@
     body{background:#fff;}
     .editor,.preview-bar,.no-print{display:none !important;}
     .report{display:block !important;}
+    /* 画面用の縮小・中央寄せ（インラインstyle）を印刷では必ず無効にする */
+    #reportPages{zoom:1 !important;transform:none !important;left:0 !important;position:static !important;margin:0 !important;}
+    body.preview-mode,body.preview-mode .report{overflow:visible !important;}
     .report-page{
       width:210mm;height:297mm;min-height:297mm;margin:0;border:none;overflow:hidden;
       padding:15mm 14mm 18mm;page-break-after:always;break-inside:avoid;
@@ -198,7 +201,7 @@
 <!-- ===================== 操作画面 ===================== -->
 <div class="editor">
   <div class="app-title">
-    📷 写真報告書 <span class="ver">0.1.18</span>
+    📷 写真報告書 <span class="ver">0.1.19</span>
     <small>写真を取り込み → 情報を入力 → PDF出力（印刷でPDF保存）</small>
     <span class="draft-note" id="draftNote"></span>
   </div>
@@ -953,10 +956,10 @@
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block"; $("camMsg").textContent = "カメラを起動中…（許可の確認が出たら「許可」を押してください）";
     clearTimeout(camWait); camWait = setTimeout(function(){
-      if(!camStream){ $("camMsg").textContent = "カメラから応答がありません。下の「標準カメラで撮る」を押してください。（版 0.1.18）"; }
+      if(!camStream){ $("camMsg").textContent = "カメラから応答がありません。下の「標準カメラで撮る」を押してください。（版 0.1.19）"; }
     }, 8000);
     if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){
-      $("camMsg").textContent = "この画面（接続方式）ではアプリ内カメラが使えません。下の「標準カメラで撮る」を押してください。（版 0.1.18）"; return;
+      $("camMsg").textContent = "この画面（接続方式）ではアプリ内カメラが使えません。下の「標準カメラで撮る」を押してください。（版 0.1.19）"; return;
     }
     // 端末によって受け付ける条件が違うため、条件をゆるめながら順に試す
     var tries = [
@@ -990,7 +993,7 @@
     // 閉じずに、標準カメラへ切り替えるボタンを出す（ユーザーの操作でないとカメラが開かないため）
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block";
-    $("camMsg").textContent = "カメラを起動できませんでした（" + name + "）。" + tip + "（版 0.1.18）";
+    $("camMsg").textContent = "カメラを起動できませんでした（" + name + "）。" + tip + "（版 0.1.19）";
   }
   function shoot(){
     var v = $("camVideo");
@@ -1010,7 +1013,7 @@
     // 画面を先に描画させてからカメラを要求する（端末によってはカメラ要求中に画面が止まるため）
     $("camOverlay").style.display = "flex";
     $("camMsg").style.display = "block"; $("camMsg").textContent = "カメラを起動中…";
-    requestAnimationFrame(function(){ setTimeout(function(){ try{ openCamera(); }catch(e){ $("camMsg").textContent = "エラー: " + (e && e.message) + "（版 0.1.18）"; } }, 150); });
+    requestAnimationFrame(function(){ setTimeout(function(){ try{ openCamera(); }catch(e){ $("camMsg").textContent = "エラー: " + (e && e.message) + "（版 0.1.19）"; } }, 150); });
   });
   $("camShot").addEventListener("click", shoot);
   $("camClose").addEventListener("click", closeCamera);
