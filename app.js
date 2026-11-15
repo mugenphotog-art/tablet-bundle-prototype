@@ -122,7 +122,7 @@ const TEMPLATES = {
     "【共用・その他】郵便受けの溜まり・ポスト内の異常",
     "【共用・その他】庭・外構の倒木・ブロック塀の傾き",
     "【共用・その他】異音・異臭なし（家全体）",
-    "【共用・その他】その他の気になる点（備考に記入）"
+    "【共用・その他】その他の気になる点（メモに記入）"
   ] },
 };
 
@@ -370,7 +370,12 @@ async function openRecord(r) {
     }
     body.appendChild(row);
   });
-  if (r.note) { add("h3", "備考", "cat").style.display = "block"; add("div", r.note).style.whiteSpace = "pre-wrap"; }
+  if (r.note) {
+    const nb = document.createElement("div"); nb.className = "memo";
+    const nh = document.createElement("div"); const ntag = document.createElement("span"); ntag.className = "tag"; ntag.textContent = "メモ"; nh.appendChild(ntag);
+    const ntx = document.createElement("div"); ntx.className = "txt"; ntx.textContent = r.note;
+    nb.append(nh, ntx); body.appendChild(nb);
+  }
   const rm = await memosOf(r.id);
   if (rm.length) { add("h3", "メモ・連絡", "cat").style.display = "block"; rm.forEach((m) => body.appendChild(memoBlock(m))); }
   const photos = await tx(["photos"], "readonly", (tt) => tt.objectStore("photos").index("recordId").getAll(r.id));
@@ -405,10 +410,15 @@ async function renderList() {
     card.innerHTML = `<div class="rechead"><span><strong>${t.name}</strong> <span class="muted">${d.toLocaleString("ja-JP")}</span></span><button class="viewBtn" type="button">記録を<br>確認</button></div>
       <div>チェック ${done}/${r.checks.length}　写真 ${r.photoCount}枚</div>
       ${r.abn && r.abn.length ? `<div class="err" data-abn></div>` : ""}
-      ${r.note ? `<div class="muted"></div>` : ""}<div class="thumbs"></div>`;
+      <div class="thumbs"></div>`;
     if (r.abn && r.abn.length) card.querySelector("[data-abn]").textContent = "異常あり " + r.abn.length + "件：" + r.abn.map((a) => a.label + (a.note ? "（" + a.note + "）" : "")).join("、");
-    if (r.note) card.querySelector("div.muted:not(.thumbs)").textContent = r.note;
     card.querySelector(".viewBtn").onclick = () => openRecord(r);
+    if (r.note) {
+      const nb = document.createElement("div"); nb.className = "memo";
+      const nh = document.createElement("div"); const ntag = document.createElement("span"); ntag.className = "tag"; ntag.textContent = "メモ"; nh.appendChild(ntag);
+      const ntx = document.createElement("div"); ntx.className = "txt"; ntx.textContent = r.note;
+      nb.append(nh, ntx); card.appendChild(nb);
+    }
     const rmemos = await memosOf(r.id);
     rmemos.forEach((m) => card.appendChild(memoBlock(m)));
     const mb = document.createElement("button"); mb.className = "sub"; mb.style.minHeight = "40px"; mb.textContent = "この記録にメモを書く";
