@@ -228,13 +228,28 @@ $("save").onclick = async () => {
       t.objectStore("records").put(rec);
       current.photos.forEach((blob) => t.objectStore("photos").put({ id: uid(), recordId: id, blob }));
     });
-    current = null; await renderList(); await renderMemos(); await renderStorage(); show("home");
+    current = null; await renderMemos(); await renderStorage(); show("home");
   } catch (err) {
     // 保存に失敗したら入力内容は残し、理由と次の操作を示す
     saving = false; $("save").disabled = false;
     setMsg("保存できませんでした（端末の空き容量が足りない可能性があります）。写真を減らして、もう一度保存してください。", true);
   }
 };
+function memoBlock(m) {
+  const d = document.createElement("div");
+  d.className = "memo" + (m.kind === "contact" ? " contact" : "") + (m.done ? " done" : "");
+  const tag = document.createElement("span"); tag.className = "tag" + (m.kind === "contact" ? " contact" : "");
+  tag.textContent = m.kind === "contact" ? (m.done ? "連絡・対応済み" : "連絡・未対応") : "メモ";
+  const when = document.createElement("span"); when.className = "muted"; when.textContent = new Date(m.createdAt).toLocaleString("ja-JP");
+  const txt = document.createElement("div"); txt.className = "txt"; txt.textContent = m.text;
+  const head = document.createElement("div"); head.append(tag, when);
+  d.append(head, txt);
+  return d;
+}
+async function memosOf(recordId) {
+  const all = await tx(["memos"], "readonly", (t) => t.objectStore("memos").getAll());
+  return all.filter((m) => m.recordId === recordId).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
 // ---------- 保存した記録の内容を見る（読み取り専用） ----------
 async function openRecord(r) {
   const t = TEMPLATES[r.template] || { name: r.template, items: [] };
@@ -272,6 +287,8 @@ async function openRecord(r) {
     body.appendChild(row);
   });
   if (r.note) { add("h3", "備考", "cat").style.display = "block"; add("div", r.note).style.whiteSpace = "pre-wrap"; }
+  const rm = await memosOf(r.id);
+  if (rm.length) { add("h3", "メモ・連絡", "cat").style.display = "block"; rm.forEach((m) => body.appendChild(memoBlock(m))); }
   const photos = await tx(["photos"], "readonly", (tt) => tt.objectStore("photos").index("recordId").getAll(r.id));
   if (photos.length) {
     add("h3", "写真 " + photos.length + "枚", "cat").style.display = "block";
@@ -308,6 +325,8 @@ async function renderList() {
     if (r.abn && r.abn.length) card.querySelector("[data-abn]").textContent = "異常あり " + r.abn.length + "件：" + r.abn.map((a) => a.label + (a.note ? "（" + a.note + "）" : "")).join("、");
     if (r.note) card.querySelector("div.muted:not(.thumbs)").textContent = r.note;
     card.querySelector(".viewBtn").onclick = () => openRecord(r);
+    const rmemos = await memosOf(r.id);
+    rmemos.forEach((m) => card.appendChild(memoBlock(m)));
     const mb = document.createElement("button"); mb.className = "sub"; mb.style.minHeight = "40px"; mb.textContent = "この記録にメモを書く";
     mb.onclick = () => { $("memoLink").value = r.id; $("memoCard").scrollIntoView(); $("memoText").focus(); };
     card.appendChild(mb);
@@ -334,6 +353,7 @@ async function renderMemos() {
   // 未対応の連絡を先頭、次に新しい順
   const rank = (m) => (m.kind === "contact" && !m.done) ? 0 : 1;
   memos.sort((a, b) => rank(a) - rank(b) || b.createdAt.localeCompare(a.createdAt));
+  await renderList();
   const box = $("memoList"); box.innerHTML = "";
   if (!memos.length) { box.innerHTML = '<div class="empty">まだメモ・連絡がありません。</div>'; return; }
   const byId = {}; recs.forEach((r) => { byId[r.id] = r; });
@@ -393,7 +413,7 @@ $("size").onclick = () => { const l = document.documentElement.classList.toggle(
 
 (async function init() {
   renderNet(); renderTemplates();
-  try { db = await openDb(); await renderList(); await renderMemos(); await renderStorage(); }
+  try { db = await openDb(); await renderMemos(); await renderStorage(); }
   catch { $("list").innerHTML = '<div class="empty err">この端末では記録を保存できません。ブラウザの設定（プライベートモード等）を確認してください。</div>'; }
   if ("serviceWorker" in navigator) {
     const had = !!navigator.serviceWorker.controller;
