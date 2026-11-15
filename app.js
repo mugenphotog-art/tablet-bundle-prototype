@@ -448,6 +448,59 @@ async function memosOf(recordId) {
   const all = await tx(["memos"], "readonly", (t) => t.objectStore("memos").getAll());
   return all.filter((m) => m.recordId === recordId).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
+// ---------- 報告書の出力 ----------
+const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+function saveBlob(blob, name) {
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+const blobToDataUrl = (b) => new Promise((res, rej) => { const f = new FileReader(); f.onload = () => res(f.result); f.onerror = () => rej(f.error); f.readAsDataURL(b); });
+// 項目ごとの結果：[大項目, 中項目, 項目, 確認(○/空), 異常(あり/空), 異常の内容]
+function reportRows(r, t) {
+  const abnBy = {}; (r.abn || []).forEach((a) => { abnBy[a.label] = a; });
+  return t.items.map((full, i) => {
+    const pi = parseItem(full), a = abnBy[pi.label];
+    return [pi.major, pi.sub, pi.label, r.checks[i] ? "○" : "", a ? "あり" : "", a ? (a.note || "") : ""];
+  });
+}
+function buildCsv(r, t, memos) {
+  const q = (v) => '"' + String(v).replace(/"/g, '""') + '"';
+  const lines = [[q("雛形"), q(t.name)], [q("記録日時"), q(fmtDT(new Date(r.createdAt)))], [],
+    ["大項目", "中項目", "項目", "確認", "異常", "異常の内容"].map(q)];
+  reportRows(r, t).forEach((x) => lines.push(x.map(q)));
+  if (r.note) lines.push([], [q("メモ"), q(r.note)]);
+  memos.forEach((m) => lines.push([q(m.kind === "contact" ? "連絡" : "メモ"), q(m.text), q(fmtDT(new Date(m.createdAt)))]));
+  return lines.map((l) => l.join(",")).join("\r\n");
+}
+function buildSummary(r, t, memos) {
+  const rows = reportRows(r, t), done = rows.filter((x) => x[3]).length, bad = rows.filter((x) => x[4]);
+  let s = t.name + "（" + fmtDT(new Date(r.createdAt)) + "）\n確認済み " + done + " / " + rows.length + " 項目\n";
+  s += bad.length ? "異常あり " + bad.length + " 件：\n" + bad.map((x) => "・" + x[2] + (x[5] ? "（" + x[5] + "）" : "")).join("\n") + "\n" : "異常の報告はありません。\n";
+  if (r.note) s += "\nメモ：" + r.note + "\n";
+  s += "\n※詳しい内容は添付のファイルをご覧ください。";
+  return s;
+}
+async function buildReportHtml(r, t, memos, photos) {
+  const imgs = [];
+  for (const p of photos) imgs.push(await blobToDataUrl(p.blob));
+  let lastCat = "", rowsHtml = "";
+  reportRows(r, t).forEach((x) => {
+    const cat = x[0] + (x[1] ? " / " + x[1] : "");
+    if (cat !== lastCat) { lastCat = cat; rowsHtml += '<tr class="cat"><td colspan="3">' + esc(cat || "項目") + "</td></tr>"; }
+    rowsHtml += "<tr" + (x[4] ? ' class="bad"' : "") + "><td>" + esc(x[2]) + '</td><td class="c">' + x[3] + '</td><td>' + (x[4] ? "異常あり " + esc(x[5]) : "") + "</td></tr>";
+  });
+  let memoHtml = "";
+  if (r.note) memoHtml += "<p><b>メモ：</b>" + esc(r.note) + "</p>";
+  memos.forEach((m) => { memoHtml += "<p><b>" + (m.kind === "contact" ? "連絡" : "メモ") + "（" + fmtDT(new Date(m.createdAt)) + "）：</b>" + esc(m.text) + "</p>"; });
+  return '<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(t.name) + '</title><style>' +
+    'body{font-family:sans-serif;margin:16px;color:#222}h1{font-size:1.4em;margin:0}table{border-collapse:collapse;width:100%;margin-top:10px}td{border:1px solid #999;padding:4px 6px;font-size:.9em}' +
+    'tr.cat td{background:#e4e8e6;font-weight:bold}tr.bad td{background:#fde8e8}td.c{text-align:center;width:3em}.ph img{width:48%;margin:1%;break-inside:avoid}@media print{.np{display:none}}' +
+    '</style></head><body><h1>' + esc(t.name) + '</h1><div>' + esc(fmtDT(new Date(r.createdAt))) + '</div>' +
+    '<p class="np">印刷画面で「送信先：PDFに保存」を選んでください。<button onclick="window.print()">印刷／PDF保存</button></p>' +
+    '<table>' + rowsHtml + '</table>' + memoHtml +
+    (imgs.length ? '<h3>写真 ' + imgs.length + '枚</h3><div class="ph">' + imgs.map((u) => '<img src="' + u + '">').join("") + "</div>" : "") +
+    '<script>setTimeout(function(){window.print()},700)<\/script></body></html>';
+}
 // ---------- 保存した記録の内容を見る（読み取り専用） ----------
 async function openRecord(r) {
   const t = TEMPLATES[r.template] || { name: r.template, items: [] };
@@ -491,6 +544,35 @@ async function openRecord(r) {
     photos.forEach((p) => { const img = document.createElement("img"); img.src = URL.createObjectURL(p.blob); box.appendChild(img); });
     body.appendChild(box);
   }
+  // 報告書の出力（PDF＝印刷画面から保存／Excel用CSV／メール）
+  add("h3", "報告書を出力", "cat").style.display = "block";
+  const outRow = document.createElement("div"); outRow.className = "row"; outRow.style.marginTop = "8px";
+  const outMsg = document.createElement("div"); outMsg.className = "muted"; outMsg.setAttribute("role", "status"); outMsg.style.marginTop = "6px";
+  const mkBtn = (txt, fn) => { const b = document.createElement("button"); b.type = "button"; b.className = "sub"; b.textContent = txt; b.onclick = async () => { outMsg.className = "muted"; outMsg.textContent = ""; try { await fn(); } catch (e) { outMsg.className = "err"; outMsg.textContent = "出力できませんでした：" + (e && e.message ? e.message : e); } }; return b; };
+  const baseName = t.name + "_" + fmtDT(new Date(r.createdAt)).replace(/[\/: ]/g, "");
+  outRow.append(
+    mkBtn("PDFにする（印刷）", async () => {
+      // ボタンを押した直後に画面を開く（後から開くとブロックされるため）。中身は出来てから書き込む
+      const w = window.open("", "_blank");
+      if (!w) { outMsg.className = "err"; outMsg.textContent = "画面を開けませんでした。ポップアップを許可してください。"; return; }
+      try { w.document.write("<p>報告書を作っています…</p>"); } catch (e) {}
+      const html = await buildReportHtml(r, t, rm, photos);
+      w.document.open(); w.document.write(html); w.document.close();
+      outMsg.textContent = "開いた画面の印刷で「PDFに保存」を選ぶとPDFになります。";
+    }),
+    mkBtn("Excel用ファイル（CSV）", async () => {
+      saveBlob(new Blob(["﻿" + buildCsv(r, t, rm)], { type: "text/csv" }), baseName + ".csv");
+      outMsg.textContent = "ダウンロードしました（" + baseName + ".csv）。Excelで開けます。写真は入りません。";
+    }),
+    mkBtn("メールで送る", async () => {
+      const sub = encodeURIComponent(t.name + " " + fmtDT(new Date(r.createdAt)));
+      const bodyTxt = encodeURIComponent(buildSummary(r, t, rm).slice(0, 1500));
+      saveBlob(new Blob(["﻿" + buildCsv(r, t, rm)], { type: "text/csv" }), baseName + ".csv");
+      outMsg.textContent = "メールの画面を開きます。CSVをダウンロードしたので、メールに添付してください（PDFは「PDFにする」から）。";
+      location.href = "mailto:?subject=" + sub + "&body=" + bodyTxt;
+    })
+  );
+  body.append(outRow, outMsg);
   // 管理者だけが消せる削除欄（パスワード）
   const dh = add("h3", "管理者用", "cat"); dh.style.display = "block";
   const delRow = document.createElement("div"); delRow.className = "row"; delRow.style.marginTop = "8px";
