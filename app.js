@@ -3,6 +3,89 @@
 
 const TEMPLATES = {
   cleaning: { name: "清掃チェック", items: ["床の掃除", "トイレの掃除", "ゴミの回収", "備品の補充", "忘れ物の確認"] },
+  minpaku:  { name: "民泊チェック", abnormal: true, items: [
+    "【清掃/全体】床・畳の掃除（髪の毛・ゴミがない）",
+    "【清掃/全体】ゴミの回収・分別",
+    "【清掃/リビング】窓・サッシ・カーテンの汚れ",
+    "【清掃/寝室】ベッド・布団のシーツ交換",
+    "【清掃/寝室】枕カバー・掛け布団カバーの交換",
+    "【清掃/キッチン】キッチン・シンク・コンロの清掃",
+    "【清掃/キッチン】食器・調理器具の洗浄と収納",
+    "【清掃/キッチン】冷蔵庫の中身の確認・清掃",
+    "【清掃/トイレ】トイレ・便座・床の清掃",
+    "【清掃/浴室】浴室・排水口（髪の毛・カビ）の清掃",
+    "【清掃/洗面所】洗面台・鏡の清掃",
+    "【清掃/玄関・ベランダ】ベランダ・玄関まわりの清掃",
+    "【備品/全体】リモコン・鍵・カードキーの確認",
+    "【備品/全体】掃除機・ほうき・モップの状態と収納",
+    "【備品/リビング】座布団・クッション・ブランケットの数と汚れ",
+    "【備品/寝室】寝具・備品の紛失・破損・汚れ",
+    "【備品/寝室】予備の枕・毛布・シーツの在庫",
+    "【備品/キッチン】洗剤・スポンジ・ゴミ袋の補充",
+    "【備品/キッチン】調味料・コーヒー・お茶などの消耗品の補充",
+    "【備品/キッチン】食器・グラス・カトラリーの欠け・不足",
+    "【備品/トイレ】トイレットペーパー・ティッシュの補充",
+    "【備品/浴室】シャンプー・リンス・ボディソープの残量",
+    "【備品/浴室】風呂椅子・洗面器・バスマットの状態",
+    "【備品/洗面所】タオル（バス・フェイス）の補充",
+    "【備品/洗面所】アメニティ（歯ブラシ・シャンプー等）の補充",
+    "【備品/洗面所】ドライヤー・アイロンの動作",
+    "【備品/洗面所】洗濯洗剤・洗濯ネットの補充",
+    "【備品/玄関・ベランダ】スリッパ・傘立て・靴べらの状態",
+    "【設備/全体】照明の点灯・球切れ",
+    "【設備/全体】火災警報器・消火器の状態",
+    "【設備/全体】水漏れ・排水の流れ",
+    "【設備/全体】ブレーカー・分電盤の状態",
+    "【設備/リビング】エアコン・暖房の動作",
+    "【設備/リビング】Wi-Fi・テレビの接続",
+    "【設備/リビング】窓・網戸・カーテンレールの開閉",
+    "【設備/寝室】寝室のエアコン・照明・コンセントの動作",
+    "【設備/キッチン】コンロ・IH・換気扇の動作",
+    "【設備/キッチン】冷蔵庫・電子レンジ・炊飯器の動作",
+    "【設備/キッチン】蛇口まわりの水漏れ",
+    "【設備/トイレ】便器の水流れ・ウォシュレットの動作",
+    "【設備/浴室】給湯器・お湯の出",
+    "【設備/浴室】シャワー・蛇口・排水の動作",
+    "【設備/洗面所】洗濯機・乾燥機の動作",
+    "【設備/玄関・ベランダ】窓・玄関・ベランダの施錠",
+    "【設備/玄関・ベランダ】玄関ドア・インターホンの動作",
+    "【宿泊者対応】忘れ物の確認",
+    "【宿泊者対応】室内の臭い・換気",
+    "【宿泊者対応】ハウスルール・案内・Wi-Fiパスワードの掲示",
+    "【宿泊者対応】チェックイン準備（鍵・案内）",
+    "【盗難/全体】鍵・カードキー・スペアキーが全部ある",
+    "【盗難/全体】キーボックス・スマートロックが正常",
+    "【盗難/全体】取扱説明書・ハウスブック・ガイドブックがある",
+    "【盗難/全体】時計・鏡・額縁・置物・観葉植物がある",
+    "【盗難/全体】照明器具・スタンドライトがある",
+    "【盗難/全体】ハンガー・衣類かご・ゴミ箱がある",
+    "【盗難/全体】予備の電池・延長コード・工具がある",
+    "【盗難/リビング】テレビ・リモコンがある",
+    "【盗難/リビング】エアコン・扇風機・ヒーターがある",
+    "【盗難/リビング】Wi-Fiルーター・充電器・ケーブルがある",
+    "【盗難/リビング】ゲーム機・スピーカー・プロジェクターがある",
+    "【盗難/リビング】クッション・ラグ・カーテンがある",
+    "【盗難/リビング】ボードゲーム・本・DVD・おもちゃがある",
+    "【盗難/寝室】布団・毛布・枕・シーツの数が揃っている",
+    "【盗難/寝室】加湿器・空気清浄機・寝室のテレビがある",
+    "【盗難/キッチン】電子レンジ・ケトル・炊飯器・トースターがある",
+    "【盗難/キッチン】ポット・コーヒーメーカー等がある",
+    "【盗難/キッチン】食器・グラス・カトラリーの数が揃っている",
+    "【盗難/キッチン】鍋・フライパン・包丁・調理器具がある",
+    "【盗難/キッチン】炊飯器の内釜・トースターのトレイなど付属品がある",
+    "【盗難/キッチン】ドリンク・飲料・備蓄食品の数が合う",
+    "【盗難/トイレ】アメニティ・トイレットペーパーの在庫が合う",
+    "【盗難/トイレ】トイレブラシ・スリッパ・サニタリーボックスがある",
+    "【盗難/浴室】シャワーヘッド・風呂椅子・洗面器がある",
+    "【盗難/洗面所】ドライヤー・アイロン・掃除機がある",
+    "【盗難/洗面所】バスタオル・フェイスタオルの数が揃っている",
+    "【盗難/洗面所】体重計・ティッシュケース・小物入れがある",
+    "【盗難/玄関・ベランダ】ドア・窓・ベランダに不審な形跡（こじ開け・傷）がない",
+    "【盗難/玄関・ベランダ】郵便受け・宅配ボックスに異常がない",
+    "【盗難/玄関・ベランダ】自転車・ベランダの備品・庭の備品がある",
+    "【盗難/玄関・ベランダ】傘・傘立て・物干し竿・洗濯ばさみがある",
+    "【盗難/玄関・ベランダ】防犯カメラ・センサーライトが正常",
+  ] },
   inspect:  { name: "住宅異常点検", abnormal: true, items: [
     "【火災・ガス】火元の確認（コンロ・ストーブ・タバコ等の消し忘れ）",
     "【火災・ガス】ガスの元栓・ガス漏れ臭",
@@ -97,27 +180,36 @@ function renderTemplates() {
   }
 }
 
+// 「【大項目】項目」または「【大項目/中項目】項目」を分解する
+function parseItem(full) {
+  const m = /^【(.*?)】(.*)$/.exec(full);
+  if (!m) return { major: "", sub: "", label: full };
+  const p = m[1].split("/");
+  return { major: p[0], sub: p[1] || "", label: m[2] };
+}
+function catHead(major, abn) {
+  const h = document.createElement("h3"); h.className = "cat";
+  const ht = document.createElement("span"); ht.textContent = major; h.appendChild(ht);
+  if (abn) {
+    const s1 = document.createElement("span"); s1.className = "abnHead"; s1.textContent = "異常あり";
+    const s2 = document.createElement("span"); s2.className = "noteHead"; s2.textContent = "内容";
+    h.append(s1, s2);
+  }
+  return h;
+}
+function subHead(sub) { const h = document.createElement("h4"); h.className = "subcat"; h.textContent = sub; return h; }
+
 function startEdit(key) {
   const t = TEMPLATES[key];
   current = { template: key, checks: t.items.map(() => false), abn: t.items.map(() => false), abnNote: t.items.map(() => ""), photos: [] };
   $("editTitle").textContent = t.name;
   $("items").innerHTML = "";
-  let lastCat = "";
+  const hasSub = t.items.some((x) => parseItem(x).sub);
+  let lastCat = "", lastSub = "";
   t.items.forEach((full, i) => {
-    // 「【分野】項目」の形は、分野の見出しを付けて表示する
-    const m = /^【(.*?)】(.*)$/.exec(full);
-    const label = m ? m[2] : full;
-    if (m && m[1] !== lastCat) {
-      lastCat = m[1];
-      const h = document.createElement("h3"); h.className = "cat";
-      const ht = document.createElement("span"); ht.textContent = lastCat; h.appendChild(ht);
-      if (t.abnormal) {
-        const s1 = document.createElement("span"); s1.className = "abnHead"; s1.textContent = "異常あり";
-        const s2 = document.createElement("span"); s2.className = "noteHead"; s2.textContent = "内容";
-        h.append(s1, s2);
-      }
-      $("items").appendChild(h);
-    }
+    const pi = parseItem(full), label = pi.label, m = pi.major ? pi : null;
+    if (m && m.major !== lastCat) { lastCat = m.major; lastSub = ""; $("items").appendChild(catHead(lastCat, t.abnormal)); }
+    if (m && m.sub && m.sub !== lastSub) { lastSub = m.sub; $("items").appendChild(subHead(lastSub)); }
     const l = document.createElement("label"); l.className = "check";
     const c = document.createElement("input"); c.type = "checkbox";
     c.onchange = () => { current.checks[i] = c.checked; };
@@ -125,11 +217,11 @@ function startEdit(key) {
     if (!t.abnormal) { $("items").appendChild(l); return; }
     // 点検項目：右に「異常あり」のチェック欄と、内容を直接書く欄を付ける
     l.classList.add("small");
-    const row = document.createElement("div"); row.className = "chkrow";
+    const row = document.createElement("div"); row.className = "chkrow" + (hasSub ? " insub" : "");
     const al = document.createElement("label"); al.className = "abn";
     const ac = document.createElement("input"); ac.type = "checkbox";
     al.appendChild(ac); al.title = "異常あり"; ac.setAttribute("aria-label", "異常あり");
-    const tx_ = document.createElement("input"); tx_.type = "text"; tx_.className = "abnNote"; tx_.placeholder = (m && i > 0 && t.items[i-1].indexOf("【" + m[1] + "】") === 0) ? "" : "異常の内容を入力";
+    const tx_ = document.createElement("input"); tx_.type = "text"; tx_.className = "abnNote"; tx_.placeholder = (m && i > 0 && parseItem(t.items[i-1]).major === m.major) ? "" : "異常の内容を入力";
     ac.onchange = () => { current.abn[i] = ac.checked; row.classList.toggle("bad", ac.checked); };
     tx_.oninput = () => {
       current.abnNote[i] = tx_.value;
@@ -260,22 +352,14 @@ async function openRecord(r) {
   const abnBy = {}; (r.abn || []).forEach((a) => { abnBy[a.label] = a; });
   const abnT = !!t.abnormal;
   const ro = (checked) => { const c = document.createElement("input"); c.type = "checkbox"; c.checked = checked; c.disabled = true; return c; };
-  let lastCat = "";
+  const hasSub = t.items.some((x) => parseItem(x).sub);
+  let lastCat = "", lastSub = "";
   t.items.forEach((full, i) => {
-    const m = /^【(.*?)】(.*)$/.exec(full), label = m ? m[2] : full;
-    if (m && m[1] !== lastCat) {
-      lastCat = m[1];
-      const h = document.createElement("h3"); h.className = "cat";
-      const ht = document.createElement("span"); ht.textContent = lastCat; h.appendChild(ht);
-      if (abnT) {
-        const s1 = document.createElement("span"); s1.className = "abnHead"; s1.textContent = "異常あり";
-        const s2 = document.createElement("span"); s2.className = "noteHead"; s2.textContent = "内容";
-        h.append(s1, s2);
-      }
-      body.appendChild(h);
-    }
+    const pi = parseItem(full), label = pi.label;
+    if (pi.major && pi.major !== lastCat) { lastCat = pi.major; lastSub = ""; body.appendChild(catHead(lastCat, abnT)); }
+    if (pi.sub && pi.sub !== lastSub) { lastSub = pi.sub; body.appendChild(subHead(lastSub)); }
     const a = abnBy[label];
-    const row = document.createElement("div"); row.className = (abnT ? "chkrow vview" : "vrow") + (a ? " bad" : "");
+    const row = document.createElement("div"); row.className = (abnT ? "chkrow vview" : "vrow") + (hasSub ? " insub" : "") + (a ? " bad" : "");
     const lab = document.createElement("label"); lab.className = "check small";
     lab.append(ro(!!r.checks[i]), document.createTextNode(label));
     row.appendChild(lab);
