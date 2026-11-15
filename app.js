@@ -170,13 +170,74 @@ async function shrink(file, maxSide = 1600, quality = 0.8) {
 function show(which) { $("home").hidden = which !== "home"; $("edit").hidden = which !== "edit"; $("view").hidden = which !== "view"; }
 function setMsg(text, isErr) { const m = $("msg"); m.textContent = text; m.className = isErr ? "err" : "muted"; }
 
+// 「新しい記録を作る」のボタンは、ドラッグで並べ替えられる（並びはこの端末に保存）
+function loadOrder() { try { return JSON.parse(localStorage.getItem("tb-template-order") || "[]"); } catch (e) { return []; } }
+function saveOrder(keys) { try { localStorage.setItem("tb-template-order", JSON.stringify(keys)); } catch (e) {} }
 function renderTemplates() {
-  $("templates").innerHTML = "";
-  for (const [key, t] of Object.entries(TEMPLATES)) {
+  const box = $("templates");
+  box.innerHTML = "";
+  const saved = loadOrder();
+  const keys = Object.keys(TEMPLATES).sort((a, b) => {
+    const ia = saved.indexOf(a), ib = saved.indexOf(b);
+    return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib);
+  });
+  let dragged = false;
+  for (const key of keys) {
     const b = document.createElement("button");
-    b.textContent = t.name;
-    b.onclick = () => startEdit(key);
-    $("templates").appendChild(b);
+    b.textContent = TEMPLATES[key].name;
+    b.setAttribute("data-key", key);
+    b.className = "tplBtn";
+    b.onclick = () => { if (dragged) { dragged = false; return; } startEdit(key); };
+    let sx = 0, sy = 0, gx = 0, gy = 0, moving = false, pid = null, target = null;
+    b.addEventListener("pointerdown", (e) => {
+      pid = e.pointerId; sx = e.clientX; sy = e.clientY; moving = false;
+      const r = b.getBoundingClientRect(); gx = e.clientX - r.left; gy = e.clientY - r.top;
+      try { b.setPointerCapture(pid); } catch (er) {}
+    });
+    b.addEventListener("pointermove", (e) => {
+      if (pid !== e.pointerId) return;
+      if (!moving) {
+        if (Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy) < 10) return;
+        moving = true; b.classList.add("dragging");
+      }
+      // ドラッグ中はボタンの並びを変えない（変えるとブラウザが操作を打ち切るため）。置く場所に目印だけ出す
+      const mark = findTarget(e.clientX, e.clientY);
+      for (const c of box.children) c.classList.remove("dropBefore", "dropAfter");
+      if (mark) mark.el.classList.add(mark.after ? "dropAfter" : "dropBefore");
+      target = mark;
+      b.style.transform = "translate(" + (e.clientX - sx) + "px," + (e.clientY - sy) + "px)";
+      e.preventDefault();
+    });
+    const findTarget = (x, y) => {
+      let best = null, bd = 1e9;
+      for (const o of box.children) {
+        if (o === b) continue;
+        const rr = o.getBoundingClientRect();
+        const cx = rr.left + rr.width / 2, cy = rr.top + rr.height / 2;
+        const d = Math.abs(x - cx) + Math.abs(y - cy) * 2;
+        if (d < bd) { bd = d; best = { el: o, after: x > cx }; }
+      }
+      return best;
+    };
+    const end = (e) => {
+      if (pid !== e.pointerId) return;
+      pid = null;
+      try { b.releasePointerCapture(e.pointerId); } catch (er) {}
+      if (moving) {
+        dragged = true; moving = false;
+        b.classList.remove("dragging"); b.style.transform = "";
+        for (const c of box.children) c.classList.remove("dropBefore", "dropAfter");
+        if (target) box.insertBefore(b, target.after ? target.el.nextSibling : target.el);
+        target = null;
+        saveOrder(Array.prototype.map.call(box.children, (c) => c.getAttribute("data-key")));
+        setTimeout(() => { dragged = false; }, 50);
+      }
+    };
+    b.addEventListener("pointerup", end);
+    b.addEventListener("pointercancel", end);
+    document.addEventListener("pointerup", end);
+    document.addEventListener("mouseup", () => { if (pid !== null) end({ pointerId: pid }); });
+    box.appendChild(b);
   }
 }
 
