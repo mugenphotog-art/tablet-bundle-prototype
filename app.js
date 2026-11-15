@@ -243,16 +243,32 @@ async function openRecord(r) {
   add("h2", t.name);
   add("div", new Date(r.createdAt).toLocaleString("ja-JP"), "muted");
   const abnBy = {}; (r.abn || []).forEach((a) => { abnBy[a.label] = a; });
+  const abnT = !!t.abnormal;
+  const ro = (checked) => { const c = document.createElement("input"); c.type = "checkbox"; c.checked = checked; c.disabled = true; return c; };
   let lastCat = "";
   t.items.forEach((full, i) => {
     const m = /^【(.*?)】(.*)$/.exec(full), label = m ? m[2] : full;
-    if (m && m[1] !== lastCat) { lastCat = m[1]; add("h3", lastCat, "cat").style.display = "block"; }
+    if (m && m[1] !== lastCat) {
+      lastCat = m[1];
+      const h = document.createElement("h3"); h.className = "cat";
+      const ht = document.createElement("span"); ht.textContent = lastCat; h.appendChild(ht);
+      if (abnT) {
+        const s1 = document.createElement("span"); s1.className = "abnHead"; s1.textContent = "異常あり";
+        const s2 = document.createElement("span"); s2.className = "noteHead"; s2.textContent = "内容";
+        h.append(s1, s2);
+      }
+      body.appendChild(h);
+    }
     const a = abnBy[label];
-    const row = document.createElement("div"); row.className = "vrow" + (a ? " bad" : "");
-    const mk = document.createElement("span"); mk.className = "mk"; mk.textContent = a ? "⚠" : (r.checks[i] ? "☑" : "☐");
-    const tx_ = document.createElement("span"); tx_.textContent = label;
-    row.append(mk, tx_);
-    if (a) { const n = document.createElement("div"); n.className = "nt"; n.textContent = "異常あり" + (a.note ? "：" + a.note : ""); tx_.appendChild(n); }
+    const row = document.createElement("div"); row.className = (abnT ? "chkrow vview" : "vrow") + (a ? " bad" : "");
+    const lab = document.createElement("label"); lab.className = "check small";
+    lab.append(ro(!!r.checks[i]), document.createTextNode(label));
+    row.appendChild(lab);
+    if (abnT) {
+      const al = document.createElement("label"); al.className = "abn"; al.appendChild(ro(!!a));
+      const nt = document.createElement("div"); nt.className = "vnote"; nt.textContent = a ? (a.note || "") : "";
+      row.append(al, nt);
+    }
     body.appendChild(row);
   });
   if (r.note) { add("h3", "備考", "cat").style.display = "block"; add("div", r.note).style.whiteSpace = "pre-wrap"; }
@@ -285,22 +301,21 @@ async function renderList() {
     const done = r.checks.filter(Boolean).length;
     const d = new Date(r.createdAt);
     const card = document.createElement("div"); card.className = "card";
-    card.innerHTML = `<strong>${t.name}</strong> <span class="muted">${d.toLocaleString("ja-JP")}</span>
+    card.innerHTML = `<div class="rechead"><span><strong>${t.name}</strong> <span class="muted">${d.toLocaleString("ja-JP")}</span></span><button class="viewBtn" type="button">記録の内容を見る</button></div>
       <div>チェック ${done}/${r.checks.length}　写真 ${r.photoCount}枚　<span class="muted">保存済み（この端末内）</span></div>
       ${r.abn && r.abn.length ? `<div class="err" data-abn></div>` : ""}
       ${r.note ? `<div class="muted"></div>` : ""}<div class="thumbs"></div>`;
     if (r.abn && r.abn.length) card.querySelector("[data-abn]").textContent = "異常あり " + r.abn.length + "件：" + r.abn.map((a) => a.label + (a.note ? "（" + a.note + "）" : "")).join("、");
     if (r.note) card.querySelector("div.muted:not(.thumbs)").textContent = r.note;
+    card.querySelector(".viewBtn").onclick = () => openRecord(r);
     const mb = document.createElement("button"); mb.className = "sub"; mb.style.minHeight = "40px"; mb.textContent = "この記録にメモを書く";
-    mb.onclick = (ev) => { ev.stopPropagation(); $("memoLink").value = r.id; $("memoCard").scrollIntoView(); $("memoText").focus(); };
+    mb.onclick = () => { $("memoLink").value = r.id; $("memoCard").scrollIntoView(); $("memoText").focus(); };
     card.appendChild(mb);
-    const hint = document.createElement("div"); hint.className = "hint"; hint.textContent = "▶ タップして記録の内容を見る";
-    card.insertBefore(hint, card.querySelector(".thumbs"));
-    card.classList.add("tap"); card.onclick = () => openRecord(r);
     box.appendChild(card);
     const photos = await tx(["photos"], "readonly", (tt) => tt.objectStore("photos").index("recordId").getAll(r.id));
     const th = card.querySelector(".thumbs");
-    for (const p of photos) { const img = document.createElement("img"); img.src = URL.createObjectURL(p.blob); th.appendChild(img); }
+    for (const p of photos.slice(0, 4)) { const img = document.createElement("img"); img.src = URL.createObjectURL(p.blob); th.appendChild(img); }
+    if (photos.length > 4) { const more = document.createElement("div"); more.className = "muted"; more.textContent = "ほか " + (photos.length - 4) + " 枚（「記録の内容を見る」で全部見られます）"; th.parentNode.insertBefore(more, th.nextSibling); }
   }
 }
 
