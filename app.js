@@ -167,7 +167,9 @@ async function shrink(file, maxSide = 1600, quality = 0.8) {
 }
 
 // ---------- 画面 ----------
-function show(which) { $("home").hidden = which !== "home"; $("edit").hidden = which !== "edit"; $("view").hidden = which !== "view"; }
+function show(which) { $("home").hidden = which !== "home"; $("edit").hidden = which !== "edit"; $("view").hidden = which !== "view"; $("admin").hidden = which !== "admin"; $("adminOpen").hidden = which !== "home"; }
+$("adminOpen").onclick = () => { renderAdmin(); show("admin"); window.scrollTo(0, 0); };
+$("adminBack").onclick = () => { show("home"); window.scrollTo(0, 0); };
 function setMsg(text, isErr) { const m = $("msg"); m.textContent = text; m.className = isErr ? "err" : "muted"; }
 
 // 「新しい記録を作る」のボタンは、ドラッグで並べ替えられる（並びはこの端末に保存）
@@ -452,7 +454,93 @@ async function openRecord(r) {
     photos.forEach((p) => { const img = document.createElement("img"); img.src = URL.createObjectURL(p.blob); box.appendChild(img); });
     body.appendChild(box);
   }
+  // 管理者だけが消せる削除欄（パスワード）
+  const dh = add("h3", "管理者用", "cat"); dh.style.display = "block";
+  const delRow = document.createElement("div"); delRow.className = "row"; delRow.style.marginTop = "8px";
+  const delBtn = document.createElement("button"); delBtn.type = "button"; delBtn.className = "sub"; delBtn.textContent = "この記録を削除する（管理者のみ）";
+  const delNote = document.createElement("span"); delNote.className = "muted"; delNote.textContent = "パスワードが必要です";
+  delBtn.onclick = async () => {
+    if (!(await adminAuth())) return;
+    if (!(await dlg({ title: "記録の削除", msg: "この記録（" + t.name + " " + fmtDT(new Date(r.createdAt)) + "）と写真を削除します。元に戻せません。", ok: "削除する" }))) return;
+    await tx(["records", "photos"], "readwrite", (tt) => {
+      tt.objectStore("records").delete(r.id);
+      tt.objectStore("photos").index("recordId").getAllKeys(r.id).onsuccess = (ev) => { ev.target.result.forEach((k) => tt.objectStore("photos").delete(k)); };
+    });
+    await renderList(); await renderMemos(); await renderStorage(); show("home"); window.scrollTo(0, 0);
+  };
+  delRow.append(delBtn, delNote); body.appendChild(delRow);
   show("view"); window.scrollTo(0, 0);
+}
+// ---------- 管理者設定（パスワードの設定・変更） ----------
+function renderAdmin(doneMsg) {
+  let saved = null;
+  try { saved = localStorage.getItem("tb-admin-pin"); } catch (e) {}
+  const box = $("adminBox"); box.innerHTML = "";
+  const mk = (labelText) => {
+    const l = document.createElement("label"); l.className = "adminField"; l.textContent = labelText;
+    const i = document.createElement("input"); i.type = "password"; i.autocomplete = "off"; l.appendChild(i); box.appendChild(l); return i;
+  };
+  const st = document.createElement("div"); st.className = "muted"; st.style.marginBottom = "8px";
+  st.textContent = saved ? "管理者パスワード：設定済み" : "管理者パスワード：未設定（下で決めてください）";
+  box.appendChild(st);
+  const cur = saved ? mk("現在のパスワード") : null;
+  const n1 = mk(saved ? "新しいパスワード（4文字以上）" : "パスワード（4文字以上）");
+  const n2 = mk("もう一度（確認）");
+  const msg = document.createElement("span"); msg.className = "muted"; msg.setAttribute("role", "status");
+  if (doneMsg) msg.textContent = doneMsg;
+  const btn = document.createElement("button"); btn.type = "button"; btn.textContent = saved ? "パスワードを変更する" : "パスワードを設定する";
+  btn.onclick = () => {
+    const bad = (t) => { msg.className = "err"; msg.textContent = t; };
+    if (saved && pinHash(cur.value) !== saved) return bad("現在のパスワードが違います。");
+    if (n1.value.length < 4) return bad("新しいパスワードは4文字以上にしてください。");
+    if (n1.value !== n2.value) return bad("確認のパスワードが一致しません。");
+    try { localStorage.setItem("tb-admin-pin", pinHash(n1.value)); } catch (e) { return bad("保存できませんでした。"); }
+    renderAdmin(saved ? "パスワードを変更しました。" : "パスワードを設定しました。");
+  };
+  const row = document.createElement("div"); row.className = "row"; row.style.marginTop = "8px"; row.append(btn, msg);
+  box.appendChild(row);
+}
+// 管理者のパスワード（この端末に保存。初回だけ新しく決める）
+function pinHash(s) { let h = 5381; const x = "tb-admin:" + s; for (let i = 0; i < x.length; i++) h = ((h * 33) ^ x.charCodeAt(i)) >>> 0; return String(h); }
+async function adminAuth() {
+  let saved = null;
+  try { saved = localStorage.getItem("tb-admin-pin"); } catch (e) {}
+  if (!saved) {
+    const v = await dlg({ title: "管理者パスワードを決める", msg: "まだ設定されていません。4文字以上で決めてください。", fields: ["パスワード", "もう一度（確認）"], ok: "設定する" });
+    if (!v) return false;
+    if (v[0].length < 4) { await dlg({ title: "入力エラー", msg: "4文字以上で入力してください。", ok: "閉じる", noCancel: true }); return false; }
+    if (v[0] !== v[1]) { await dlg({ title: "入力エラー", msg: "確認のパスワードが一致しませんでした。", ok: "閉じる", noCancel: true }); return false; }
+    try { localStorage.setItem("tb-admin-pin", pinHash(v[0])); renderAdmin(); } catch (e) { await dlg({ title: "エラー", msg: "パスワードを保存できませんでした。", ok: "閉じる", noCancel: true }); return false; }
+    return true;
+  }
+  const v = await dlg({ title: "管理者の確認", msg: "管理者のパスワードを入力してください。", fields: ["パスワード"], ok: "確認" });
+  if (!v) return false;
+  if (pinHash(v[0]) !== saved) { await dlg({ title: "確認できません", msg: "パスワードが違います。", ok: "閉じる", noCancel: true }); return false; }
+  return true;
+}
+// ページ内のダイアログ（prompt/confirmが使えない環境でも動く）。OKで入力値の配列（入力欄なしならtrue）、キャンセルでnull
+function dlg(o) {
+  return new Promise((resolve) => {
+    const ov = document.createElement("div");
+    ov.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;z-index:300;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;";
+    const bx = document.createElement("div");
+    bx.style.cssText = "background:#fff;border-radius:12px;padding:18px;width:100%;max-width:420px;";
+    const h = document.createElement("h2"); h.textContent = o.title; h.style.marginTop = "0";
+    const m = document.createElement("div"); m.textContent = o.msg; m.style.marginBottom = "12px";
+    bx.append(h, m);
+    const ins = (o.fields || []).map((f) => {
+      const l = document.createElement("label"); l.className = "adminField"; l.textContent = f;
+      const i = document.createElement("input"); i.type = "password"; i.autocomplete = "off"; l.appendChild(i); bx.appendChild(l); return i;
+    });
+    const row = document.createElement("div"); row.className = "row"; row.style.marginTop = "8px";
+    const done = (v) => { document.body.removeChild(ov); resolve(v); };
+    const ok = document.createElement("button"); ok.type = "button"; ok.textContent = o.ok || "OK";
+    ok.onclick = () => done(ins.length ? ins.map((i) => i.value) : true);
+    row.appendChild(ok);
+    if (!o.noCancel) { const c = document.createElement("button"); c.type = "button"; c.className = "sub"; c.textContent = "やめる"; c.onclick = () => done(null); row.appendChild(c); }
+    bx.appendChild(row); ov.appendChild(bx); document.body.appendChild(ov);
+    if (ins[0]) ins[0].focus();
+  });
 }
 $("viewBack").onclick = $("viewBack2").onclick = () => { show("home"); window.scrollTo(0, 0); };
 
@@ -573,7 +661,7 @@ $("size").onclick = () => { const l = document.documentElement.classList.toggle(
 
 (async function init() {
   renderNet(); renderTemplates();
-  try { db = await openDb(); await renderMemos(); await renderStorage(); }
+  try { db = await openDb(); renderAdmin(); await renderMemos(); await renderStorage(); }
   catch { $("list").innerHTML = '<div class="empty err">この端末では記録を保存できません。ブラウザの設定（プライベートモード等）を確認してください。</div>'; }
   if ("serviceWorker" in navigator) {
     const had = !!navigator.serviceWorker.controller;
