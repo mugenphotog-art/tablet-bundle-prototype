@@ -460,7 +460,7 @@ function reportRows(r, t) {
   const abnBy = {}; (r.abn || []).forEach((a) => { abnBy[a.label] = a; });
   return t.items.map((full, i) => {
     const pi = parseItem(full), a = abnBy[pi.label];
-    return [pi.major, pi.sub, pi.label, r.checks[i] ? "○" : "", a ? "あり" : "", a ? (a.note || "") : ""];
+    return [pi.major, pi.sub, pi.label, r.checks[i] ? "○" : "", a ? "あり" : "", a ? ((a.resolved ? "【対応済み】" : "【要対応】") + (a.note || "")) : ""];
   });
 }
 function buildCsv(r, t, memos) {
@@ -571,7 +571,31 @@ async function openRecord(r) {
     row.appendChild(lab);
     if (abnT) {
       const al = document.createElement("label"); al.className = "abn"; al.appendChild(ro(!!a));
-      const nt = document.createElement("div"); nt.className = "vnote"; nt.textContent = a ? (a.note || "") : "";
+      const nt = document.createElement("div"); nt.className = "vnote";
+      if (a) {
+        const st = document.createElement("div"); st.className = "needAct";
+        const setSt = () => { st.textContent = a.resolved ? "対応済み" : "要対応"; st.classList.toggle("done", !!a.resolved); row.classList.toggle("fixed", !!a.resolved); };
+        setSt();
+        nt.appendChild(st);
+        if (a.note) { const tx_ = document.createElement("div"); tx_.textContent = a.note; nt.appendChild(tx_); }
+        const rl = document.createElement("label"); rl.className = "resolvedChk";
+        const rc = document.createElement("input"); rc.type = "checkbox"; rc.checked = !!a.resolved;
+        // チェックしただけでは保存しない。「保存する」を押したときに保存する
+        let savedVal = !!a.resolved;
+        const sv = document.createElement("button"); sv.type = "button"; sv.className = "saveResolved"; sv.textContent = "保存する"; sv.style.display = "none";
+        const stView = () => { st.textContent = rc.checked ? "対応済み" : "要対応"; st.classList.toggle("done", rc.checked); row.classList.toggle("fixed", rc.checked); };
+        rc.onchange = () => { stView(); sv.style.display = rc.checked !== savedVal ? "" : "none"; };
+        sv.onclick = async () => {
+          a.resolved = rc.checked; if (rc.checked) a.resolvedAt = new Date().toISOString(); else delete a.resolvedAt;
+          await tx(["records"], "readwrite", (tt) => tt.objectStore("records").put(r));
+          savedVal = rc.checked; sv.style.display = "none";
+          sv.parentNode.appendChild(Object.assign(document.createElement("div"), { className: "savedMsg", textContent: "保存しました" }));
+          setTimeout(() => { const m = nt.querySelector(".savedMsg"); if (m) m.remove(); }, 2500);
+          renderList();
+        };
+        rl.append(rc, document.createTextNode("対応済み"));
+        nt.append(rl, sv);
+      }
       row.append(al, nt);
     }
     body.appendChild(row);
@@ -737,7 +761,7 @@ async function renderList() {
       <div>チェック ${done}/${r.checks.length}　写真 ${r.photoCount}枚</div>
       ${r.abn && r.abn.length ? `<div class="err" data-abn></div>` : ""}
       <div class="thumbs"></div>`;
-    if (r.abn && r.abn.length) card.querySelector("[data-abn]").textContent = "異常あり " + r.abn.length + "件：" + r.abn.map((a) => a.label + (a.note ? "（" + a.note + "）" : "")).join("、");
+    if (r.abn && r.abn.length) { const open = r.abn.filter((a) => !a.resolved); const ab = card.querySelector("[data-abn]"); if (!open.length) { ab.classList.remove("err"); ab.classList.add("allDone"); } ab.textContent = (open.length ? "要対応 " + open.length + "件" : "すべて対応済み") + "（異常あり " + r.abn.length + "件）：" + r.abn.map((a) => (a.resolved ? "✓" : "") + a.label + (a.note ? "（" + a.note + "）" : "")).join("、"); }
     card.querySelector(".viewBtn").onclick = () => openRecord(r);
     if (r.note) {
       const nb = document.createElement("div"); nb.className = "memo";

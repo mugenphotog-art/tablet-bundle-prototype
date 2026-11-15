@@ -23,7 +23,7 @@
   #list .card { background:#fff; border:1px solid #b3bdb9; margin-bottom:14px; }
   #list .card:last-child { margin-bottom:0; }
   #list .card .memo, #viewBody .memo { background:#e4e8e6; border-color:#b3bdb9; }
-  #list .card .memo .tag:not(.contact), #viewBody .memo .tag:not(.contact) { background:#ffd600; color:#3a2f00; font-weight:700; }
+  #list .card .memo .tag:not(.contact), #viewBody .memo .tag:not(.contact) { background:#fff; color:#1c2421; font-weight:700; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px; }
   button, .btn { font:inherit; min-height:52px; min-width:52px; padding:10px 18px; border-radius:10px; border:1px solid var(--accent); background:var(--accent); color:#fff; cursor:pointer; }
   button.sub { background:#fff; color:var(--accent); }
@@ -38,6 +38,11 @@
   textarea { width:100%; font:inherit; min-height:80px; padding:8px; border:1px solid var(--line); border-radius:8px; }
   .rechead { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-bottom:6px; }
   button.viewBtn { background:#ffd600; color:#3a2f00; border:1px solid #f9a825; font-weight:700; min-height:44px; padding:4px 10px; line-height:1.25; white-space:nowrap; }
+  .needAct { display:inline-block; font-weight:700; color:#fff; background:var(--warn); border-radius:6px; padding:1px 8px; margin-bottom:2px; } .needAct.done { background:#1f6f5c; }
+  .resolvedChk { display:flex; align-items:center; gap:8px; margin-top:4px; font-size:1.05em; color:#1c2421; } .resolvedChk input { width:26px; height:26px; min-width:26px; min-height:26px; margin:0; }
+  .saveResolved { margin-top:6px; min-height:40px; padding:4px 16px; font-weight:700; } .savedMsg { color:#1f6f5c; font-weight:700; margin-top:4px; }
+  .allDone { color:#1f6f5c; font-weight:700; }
+  .vview.fixed { background:#eef6f2; }
   .vview .vnote { min-width:0; font-size:.82em; color:var(--warn); padding:4px 0; word-break:break-all; }
   #list .rechead > span:first-child strong { display:inline-block; min-width:6.6em; }
   .adminField { display:block; margin-bottom:8px; font-size:.9em; }
@@ -82,7 +87,7 @@
 </head>
 <body>
 <header>
-  <h1>現場記録 <small id="ver" style="font-size:.5em;font-weight:400;opacity:.8">0.1.61</small></h1>
+  <h1>現場記録 <small id="ver" style="font-size:.5em;font-weight:400;opacity:.8">0.1.65</small></h1>
   <span id="net" class="badge">オンライン</span>
   <button id="adminOpen" class="sub" style="min-height:40px;padding:4px 12px">管理者設定</button>
   <button id="size" class="sub" style="min-height:40px;padding:4px 12px">文字 大</button>
