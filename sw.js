@@ -1,5 +1,5 @@
 // 試作: アプリ本体をキャッシュして、電波がなくても開けるようにする
-const CACHE = "tablet-bundle-proto-v14";
+const CACHE = "tablet-bundle-proto-v15";
 const FILES = ["./", "index.html", "app.js", "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", (e) => {

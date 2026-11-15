@@ -84,7 +84,7 @@ async function shrink(file, maxSide = 1600, quality = 0.8) {
 }
 
 // ---------- 画面 ----------
-function show(which) { $("home").hidden = which !== "home"; $("edit").hidden = which !== "edit"; }
+function show(which) { $("home").hidden = which !== "home"; $("edit").hidden = which !== "edit"; $("view").hidden = which !== "view"; }
 function setMsg(text, isErr) { const m = $("msg"); m.textContent = text; m.className = isErr ? "err" : "muted"; }
 
 function renderTemplates() {
@@ -235,6 +235,38 @@ $("save").onclick = async () => {
     setMsg("保存できませんでした（端末の空き容量が足りない可能性があります）。写真を減らして、もう一度保存してください。", true);
   }
 };
+// ---------- 保存した記録の内容を見る（読み取り専用） ----------
+async function openRecord(r) {
+  const t = TEMPLATES[r.template] || { name: r.template, items: [] };
+  const body = $("viewBody"); body.innerHTML = "";
+  const add = (tag, text, cls) => { const e = document.createElement(tag); if (cls) e.className = cls; e.textContent = text; body.appendChild(e); return e; };
+  add("h2", t.name);
+  add("div", new Date(r.createdAt).toLocaleString("ja-JP"), "muted");
+  const abnBy = {}; (r.abn || []).forEach((a) => { abnBy[a.label] = a; });
+  let lastCat = "";
+  t.items.forEach((full, i) => {
+    const m = /^【(.*?)】(.*)$/.exec(full), label = m ? m[2] : full;
+    if (m && m[1] !== lastCat) { lastCat = m[1]; add("h3", lastCat, "cat").style.display = "block"; }
+    const a = abnBy[label];
+    const row = document.createElement("div"); row.className = "vrow" + (a ? " bad" : "");
+    const mk = document.createElement("span"); mk.className = "mk"; mk.textContent = a ? "⚠" : (r.checks[i] ? "☑" : "☐");
+    const tx_ = document.createElement("span"); tx_.textContent = label;
+    row.append(mk, tx_);
+    if (a) { const n = document.createElement("div"); n.className = "nt"; n.textContent = "異常あり" + (a.note ? "：" + a.note : ""); tx_.appendChild(n); }
+    body.appendChild(row);
+  });
+  if (r.note) { add("h3", "備考", "cat").style.display = "block"; add("div", r.note).style.whiteSpace = "pre-wrap"; }
+  const photos = await tx(["photos"], "readonly", (tt) => tt.objectStore("photos").index("recordId").getAll(r.id));
+  if (photos.length) {
+    add("h3", "写真 " + photos.length + "枚", "cat").style.display = "block";
+    const box = document.createElement("div"); box.className = "vthumbs";
+    photos.forEach((p) => { const img = document.createElement("img"); img.src = URL.createObjectURL(p.blob); box.appendChild(img); });
+    body.appendChild(box);
+  }
+  show("view"); window.scrollTo(0, 0);
+}
+$("viewBack").onclick = $("viewBack2").onclick = () => { show("home"); window.scrollTo(0, 0); };
+
 function backToMenu() {
   const dirty = current && (current.checks.some(Boolean) || current.abn.some(Boolean) || current.abnNote.some((s) => s) || current.photos.length || $("note").value.trim());
   if (dirty && !confirm("入力した内容は保存されません。メニューに戻りますか？")) return;
@@ -260,8 +292,11 @@ async function renderList() {
     if (r.abn && r.abn.length) card.querySelector("[data-abn]").textContent = "異常あり " + r.abn.length + "件：" + r.abn.map((a) => a.label + (a.note ? "（" + a.note + "）" : "")).join("、");
     if (r.note) card.querySelector("div.muted:not(.thumbs)").textContent = r.note;
     const mb = document.createElement("button"); mb.className = "sub"; mb.style.minHeight = "40px"; mb.textContent = "この記録にメモを書く";
-    mb.onclick = () => { $("memoLink").value = r.id; $("memoCard").scrollIntoView(); $("memoText").focus(); };
+    mb.onclick = (ev) => { ev.stopPropagation(); $("memoLink").value = r.id; $("memoCard").scrollIntoView(); $("memoText").focus(); };
     card.appendChild(mb);
+    const hint = document.createElement("div"); hint.className = "hint"; hint.textContent = "▶ タップして記録の内容を見る";
+    card.insertBefore(hint, card.querySelector(".thumbs"));
+    card.classList.add("tap"); card.onclick = () => openRecord(r);
     box.appendChild(card);
     const photos = await tx(["photos"], "readonly", (tt) => tt.objectStore("photos").index("recordId").getAll(r.id));
     const th = card.querySelector(".thumbs");

@@ -25,6 +25,9 @@
   label.check { display:flex; align-items:center; gap:12px; min-height:52px; border-bottom:1px solid var(--line); }
   label.check input { width:28px; height:28px; min-width:28px; min-height:28px; flex:0 0 28px; margin:0; }
   textarea { width:100%; font:inherit; min-height:80px; padding:8px; border:1px solid var(--line); border-radius:8px; }
+  .card.tap { cursor:pointer; } .card.tap .hint { color:var(--accent); font-size:.85em; margin:4px 0; }
+  .vrow { display:flex; gap:10px; padding:8px 0; border-bottom:1px solid var(--line); font-size:.9em; } .vrow .mk { flex:0 0 28px; text-align:center; font-weight:700; } .vrow.bad { background:#fff4e8; } .vrow .nt { color:var(--warn); font-size:.95em; }
+  .vthumbs img { width:100%; max-width:420px; height:auto; display:block; margin:8px 0; border-radius:8px; border:1px solid var(--line); }
   .thumbs { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
   .thumbs img { width:96px; height:96px; object-fit:cover; border-radius:8px; border:1px solid var(--line); }
   .muted { color:#5b6762; font-size:.85em; }
@@ -84,6 +87,12 @@
       <div id="memoList" style="margin-top:12px"></div>
     </div>
     <div class="card muted" id="storage">保存領域を確認中…</div>
+  </section>
+
+  <section id="view" hidden>
+    <div class="row" style="margin-bottom:10px"><button id="viewBack" class="sub">← メニューへ戻る</button></div>
+    <div class="card" id="viewBody"></div>
+    <div class="row"><button id="viewBack2" class="sub">← メニューへ戻る</button></div>
   </section>
 
   <section id="edit" hidden>
