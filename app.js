@@ -301,8 +301,8 @@ async function renderList() {
     const done = r.checks.filter(Boolean).length;
     const d = new Date(r.createdAt);
     const card = document.createElement("div"); card.className = "card";
-    card.innerHTML = `<div class="rechead"><span><strong>${t.name}</strong> <span class="muted">${d.toLocaleString("ja-JP")}</span></span><button class="viewBtn" type="button">記録の内容を見る</button></div>
-      <div>チェック ${done}/${r.checks.length}　写真 ${r.photoCount}枚　<span class="muted">保存済み（この端末内）</span></div>
+    card.innerHTML = `<div class="rechead"><span><strong>${t.name}</strong> <span class="muted">${d.toLocaleString("ja-JP")}</span></span><button class="viewBtn" type="button">記録を<br>確認</button></div>
+      <div>チェック ${done}/${r.checks.length}　写真 ${r.photoCount}枚</div>
       ${r.abn && r.abn.length ? `<div class="err" data-abn></div>` : ""}
       ${r.note ? `<div class="muted"></div>` : ""}<div class="thumbs"></div>`;
     if (r.abn && r.abn.length) card.querySelector("[data-abn]").textContent = "異常あり " + r.abn.length + "件：" + r.abn.map((a) => a.label + (a.note ? "（" + a.note + "）" : "")).join("、");
@@ -315,7 +315,7 @@ async function renderList() {
     const photos = await tx(["photos"], "readonly", (tt) => tt.objectStore("photos").index("recordId").getAll(r.id));
     const th = card.querySelector(".thumbs");
     for (const p of photos.slice(0, 4)) { const img = document.createElement("img"); img.src = URL.createObjectURL(p.blob); th.appendChild(img); }
-    if (photos.length > 4) { const more = document.createElement("div"); more.className = "muted"; more.textContent = "ほか " + (photos.length - 4) + " 枚（「記録の内容を見る」で全部見られます）"; th.parentNode.insertBefore(more, th.nextSibling); }
+    if (photos.length > 4) { const more = document.createElement("div"); more.className = "muted"; more.textContent = "ほか " + (photos.length - 4) + " 枚"; th.parentNode.insertBefore(more, th.nextSibling); }
   }
 }
 
