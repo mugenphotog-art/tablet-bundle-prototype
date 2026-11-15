@@ -23,7 +23,7 @@
   button:disabled { opacity:.5; cursor:default; }
   .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
   label.check { display:flex; align-items:center; gap:12px; min-height:52px; border-bottom:1px solid var(--line); }
-  label.check input { width:28px; height:28px; }
+  label.check input { width:28px; height:28px; min-width:28px; min-height:28px; flex:0 0 28px; margin:0; }
   textarea { width:100%; font:inherit; min-height:80px; padding:8px; border:1px solid var(--line); border-radius:8px; }
   .thumbs { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
   .thumbs img { width:96px; height:96px; object-fit:cover; border-radius:8px; border:1px solid var(--line); }
@@ -36,9 +36,9 @@
   .chkrow, h3.cat { display:grid; grid-template-columns:minmax(0,1fr) 64px minmax(130px,1fr); gap:0 10px; align-items:center; }
   .chkrow { border-bottom:1px solid var(--line); }
   .chkrow label.check { border-bottom:0; font-size:.82em; min-height:48px; }
-  .chkrow label.check input { width:24px; height:24px; }
+  .chkrow label.check input { width:28px; height:28px; min-width:28px; min-height:28px; flex:0 0 28px; }
   .chkrow label.abn { display:flex; justify-content:center; align-items:center; min-height:48px; }
-  .chkrow label.abn input { width:28px; height:28px; accent-color:var(--warn); }
+  .chkrow label.abn input { width:28px; height:28px; min-width:28px; min-height:28px; flex:0 0 28px; margin:0; accent-color:var(--warn); }
   .chkrow input.abnNote { min-width:0; font:inherit; font-size:.82em; min-height:44px; padding:4px 8px; border:1px solid var(--line); border-radius:8px; }
   .chkrow.bad { background:#fff4e8; }
   h3.cat { font-size:.95em; margin:14px 0 2px; padding:4px 10px; background:#e3ebe8; border-radius:6px; color:var(--accent); }
