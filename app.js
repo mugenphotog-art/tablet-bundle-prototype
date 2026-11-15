@@ -3,7 +3,7 @@
 
 const TEMPLATES = {
   cleaning: { name: "清掃チェック", items: ["床の掃除", "トイレの掃除", "ゴミの回収", "備品の補充", "忘れ物の確認"] },
-  inspect:  { name: "住宅異常点検チェック", abnormal: true, items: [
+  inspect:  { name: "住宅異常点検", abnormal: true, items: [
     "【火災・ガス】火元の確認（コンロ・ストーブ・タバコ等の消し忘れ）",
     "【火災・ガス】ガスの元栓・ガス漏れ臭",
     "【火災・ガス】コンロ・給湯器まわりの異常",
