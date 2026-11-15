@@ -877,6 +877,10 @@ $("size").onclick = () => { const l = document.documentElement.classList.toggle(
   if ("serviceWorker" in navigator) {
     const had = !!navigator.serviceWorker.controller;
     navigator.serviceWorker.addEventListener("controllerchange", () => { if (had) location.reload(); });
-    navigator.serviceWorker.register("sw.js").catch(() => {});
+    navigator.serviceWorker.register("sw.js").then((reg) => {
+      const chk = () => { try { reg.update(); } catch (e) {} };
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) chk(); });
+      window.addEventListener("online", chk);
+    }).catch(() => {});
   }
 })();
