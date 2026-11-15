@@ -168,13 +168,49 @@ async function shrink(file, maxSide = 1600, quality = 0.8) {
 
 // ---------- 画面 ----------
 function show(which) { $("home").hidden = which !== "home"; $("edit").hidden = which !== "edit"; $("view").hidden = which !== "view"; $("admin").hidden = which !== "admin"; $("adminOpen").hidden = which !== "home"; }
-$("adminOpen").onclick = () => { renderAdmin(); show("admin"); window.scrollTo(0, 0); };
+$("adminOpen").onclick = () => { renderAdmin(); renderTplSettings(); show("admin"); window.scrollTo(0, 0); };
 $("adminBack").onclick = () => { show("home"); window.scrollTo(0, 0); };
 function setMsg(text, isErr) { const m = $("msg"); m.textContent = text; m.className = isErr ? "err" : "muted"; }
 
 // 「新しい記録を作る」のボタンは、ドラッグで並べ替えられる（並びはこの端末に保存）
 function loadOrder() { try { return JSON.parse(localStorage.getItem("tb-template-order") || "[]"); } catch (e) { return []; } }
 function saveOrder(keys) { try { localStorage.setItem("tb-template-order", JSON.stringify(keys)); } catch (e) {} }
+// 使う雛形（業種別の切り替え）。この端末に保存。未設定なら全部使う。1つ以上は必ず残す
+function loadEnabled() {
+  const all = Object.keys(TEMPLATES);
+  try {
+    const s = JSON.parse(localStorage.getItem("tb-template-enabled") || "null");
+    if (s && s.length) { const f = all.filter((k) => s.indexOf(k) >= 0); if (f.length) return f; }
+  } catch (e) {}
+  return all;
+}
+function saveEnabled(keys) { try { localStorage.setItem("tb-template-enabled", JSON.stringify(keys)); return true; } catch (e) { return false; } }
+// 管理者設定：使う雛形を選ぶ（変更は管理者パスワードが必要）
+function renderTplSettings(doneMsg) {
+  const box = $("tplBox"); box.innerHTML = "";
+  const en = loadEnabled();
+  const note = document.createElement("div"); note.className = "muted"; note.style.marginBottom = "8px";
+  note.textContent = "ホームに出す雛形を選びます（1つ以上）。業種に合わせて切り替えられます。";
+  box.appendChild(note);
+  const ins = {};
+  for (const k of Object.keys(TEMPLATES)) {
+    const l = document.createElement("label"); l.className = "adminField";
+    const c = document.createElement("input"); c.type = "checkbox"; c.checked = en.indexOf(k) >= 0;
+    c.style.cssText = "display:inline-block;width:auto;min-height:0;margin:0 8px 0 0;vertical-align:middle;transform:scale(1.5)";
+    l.appendChild(c); l.appendChild(document.createTextNode(TEMPLATES[k].name)); box.appendChild(l); ins[k] = c;
+  }
+  const msg = document.createElement("span"); msg.className = "muted"; msg.setAttribute("role", "status"); if (doneMsg) msg.textContent = doneMsg;
+  const btn = document.createElement("button"); btn.type = "button"; btn.textContent = "雛形の選択を保存する";
+  btn.onclick = async () => {
+    const sel = Object.keys(TEMPLATES).filter((k) => ins[k].checked);
+    if (!sel.length) { msg.className = "err"; msg.textContent = "1つ以上選んでください。"; return; }
+    if (!(await adminAuth())) { msg.className = "err"; msg.textContent = "保存しませんでした（管理者の確認ができませんでした）。"; return; }
+    if (!saveEnabled(sel)) { msg.className = "err"; msg.textContent = "保存できませんでした。"; return; }
+    renderTemplates(); renderTplSettings("保存しました。ホームの雛形が切り替わりました。");
+  };
+  const row = document.createElement("div"); row.className = "row"; row.style.marginTop = "8px"; row.append(btn, msg);
+  box.appendChild(row);
+}
 // 日時の表示：「26/11/15 9:45」（年は下2桁、秒は出さない）
 function fmtDT(d) {
   const p = (n) => (n < 10 ? "0" : "") + n;
@@ -185,7 +221,8 @@ function renderTemplates() {
   const box = $("templates");
   box.innerHTML = "";
   const saved = loadOrder();
-  const keys = Object.keys(TEMPLATES).sort((a, b) => {
+  const en = loadEnabled();
+  const keys = Object.keys(TEMPLATES).filter((k) => en.indexOf(k) >= 0).sort((a, b) => {
     const ia = saved.indexOf(a), ib = saved.indexOf(b);
     return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib);
   });
