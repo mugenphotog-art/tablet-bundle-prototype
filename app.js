@@ -336,7 +336,7 @@ function startEdit(key) {
     row.append(l, al, tx_);
     $("items").appendChild(row);
   });
-  $("note").value = ""; $("thumbs").innerHTML = ""; setMsg("");
+  $("propName").value = ""; $("note").value = ""; $("thumbs").innerHTML = ""; setMsg("");
   $("save").disabled = false; saving = false;
   show("edit");
 }
@@ -420,7 +420,7 @@ $("save").onclick = async () => {
   saving = true; $("save").disabled = true; setMsg("保存中…");
   const id = uid();
   const rec = { id, template: current.template, createdAt: new Date().toISOString(),
-                checks: current.checks, abn: current.abn.map((b, i) => b ? { label: TEMPLATES[current.template].items[i].replace(/^【.*?】/, ""), note: current.abnNote[i].trim() } : null).filter(Boolean), note: $("note").value.trim(), photoCount: current.photos.length };
+                checks: current.checks, abn: current.abn.map((b, i) => b ? { label: TEMPLATES[current.template].items[i].replace(/^【.*?】/, ""), note: current.abnNote[i].trim() } : null).filter(Boolean), note: $("note").value.trim(), property: $("propName").value.trim(), photoCount: current.photos.length };
   try {
     await tx(["records", "photos"], "readwrite", (t) => {
       t.objectStore("records").put(rec);
@@ -433,15 +433,27 @@ $("save").onclick = async () => {
     setMsg("保存できませんでした（端末の空き容量が足りない可能性があります）。写真を減らして、もう一度保存してください。", true);
   }
 };
-function memoBlock(m) {
+function memoBlock(m, onChange) {
   const d = document.createElement("div");
   d.className = "memo" + (m.kind === "contact" ? " contact" : "") + (m.done ? " done" : "");
   const tag = document.createElement("span"); tag.className = "tag" + (m.kind === "contact" ? " contact" : "");
   tag.textContent = m.kind === "contact" ? (m.done ? "連絡・対応済み" : "連絡・未対応") : "メモ";
   const when = document.createElement("span"); when.className = "muted"; when.textContent = fmtDT(new Date(m.createdAt));
   const txt = document.createElement("div"); txt.className = "txt"; txt.textContent = m.text;
-  const head = document.createElement("div"); head.append(tag, when);
+  const head = document.createElement("div"); head.className = "memoHead";
+  const lead = document.createElement("span"); lead.append(tag, when); head.appendChild(lead);
   d.append(head, txt);
+  if (onChange) {
+    const row = document.createElement("span"); row.className = "memoBtns";
+    if (m.kind === "contact") {
+      const b = document.createElement("button"); b.type = "button"; b.className = "sub"; b.style.minHeight = "36px"; b.textContent = m.done ? "未対応に戻す" : "対応済みにする";
+      b.onclick = async () => { m.done = !m.done; await tx(["memos"], "readwrite", (t) => t.objectStore("memos").put(m)); await onChange(); };
+      row.appendChild(b);
+    }
+    const x = document.createElement("button"); x.type = "button"; x.className = "sub"; x.style.minHeight = "36px"; x.textContent = "削除";
+    x.onclick = async () => { if (!(await adminAuth())) return; await tx(["memos"], "readwrite", (t) => t.objectStore("memos").delete(m.id)); await onChange(); };
+    row.appendChild(x); head.appendChild(row);
+  }
   return d;
 }
 async function memosOf(recordId) {
@@ -465,7 +477,7 @@ function reportRows(r, t) {
 }
 function buildCsv(r, t, memos) {
   const q = (v) => '"' + String(v).replace(/"/g, '""') + '"';
-  const lines = [[q("雛形"), q(t.name)], [q("記録日時"), q(fmtDT(new Date(r.createdAt)))], [],
+  const lines = [[q("雛形"), q(t.name)], [q("物件名"), q(r.property || "")], [q("記録日時"), q(fmtDT(new Date(r.createdAt)))], [],
     ["大項目", "中項目", "項目", "確認", "異常", "異常の内容"].map(q)];
   reportRows(r, t).forEach((x) => lines.push(x.map(q)));
   if (r.note) lines.push([], [q("メモ"), q(r.note)]);
@@ -474,7 +486,7 @@ function buildCsv(r, t, memos) {
 }
 function buildSummary(r, t, memos) {
   const rows = reportRows(r, t), done = rows.filter((x) => x[3]).length, bad = rows.filter((x) => x[4]);
-  let s = t.name + "（" + fmtDT(new Date(r.createdAt)) + "）\n確認済み " + done + " / " + rows.length + " 項目\n";
+  let s = t.name + (r.property ? "　物件：" + r.property : "") + "（" + fmtDT(new Date(r.createdAt)) + "）\n確認済み " + done + " / " + rows.length + " 項目\n";
   s += bad.length ? "異常あり " + bad.length + " 件：\n" + bad.map((x) => "・" + x[2] + (x[5] ? "（" + x[5] + "）" : "")).join("\n") + "\n" : "異常の報告はありません。\n";
   if (r.note) s += "\nメモ：" + r.note + "\n";
   s += "\n※詳しい内容は添付のファイルをご覧ください。";
@@ -528,7 +540,7 @@ async function buildReportHtml(r, t, memos, photos) {
     '.pg{position:relative;box-sizing:border-box;width:' + PW_FULL + 'px;height:' + PH + 'px;padding:' + PAD_T + 'px ' + PAD_X + 'px ' + PAD_B + 'px;margin:0 auto 12px;background:#fff;overflow:hidden;page-break-after:always;break-after:page}' +
     '.pn{position:absolute;top:16px;right:' + PAD_X + 'px;font-size:12px;color:#5b6762}' +
     '@media print{body{background:#fff}.pg{margin:0}.pg:last-child{page-break-after:auto;break-after:auto}}' +
-    '</style></head><body><div id="src"><h1>' + esc(t.name) + '</h1><div class="muted">' + esc(fmtDT(new Date(r.createdAt))) + '</div>' +
+    '</style></head><body><div id="src"><h1>' + esc(t.name) + '</h1>' + (r.property ? '<div style="font-weight:700;font-size:15px;margin-bottom:2px">物件名：' + esc(r.property) + '</div>' : '') + '<div class="muted">' + esc(fmtDT(new Date(r.createdAt))) + '</div>' +
     rowsHtml + memoHtml +
     (imgs.length ? '<h3>写真 ' + imgs.length + '枚</h3>' + prows : "") +
     '</div><script>' + PAGER + '<\/script></body></html>';
@@ -549,10 +561,12 @@ function showReport(html) {
   pb.onclick = () => { try { fr.contentWindow.focus(); fr.contentWindow.print(); } catch (e) { hint.className = "err"; hint.textContent = "印刷を開けませんでした：" + e.message; } };
 }
 // ---------- 保存した記録の内容を見る（読み取り専用） ----------
-async function openRecord(r) {
+async function openRecord(r, opts) {
   const t = TEMPLATES[r.template] || { name: r.template, items: [] };
   const body = $("viewBody"); body.innerHTML = "";
+  let memoAnchor = null, memoTa = null;
   const add = (tag, text, cls) => { const e = document.createElement(tag); if (cls) e.className = cls; e.textContent = text; body.appendChild(e); return e; };
+  if (r.property) add("div", r.property, "propLine");
   add("h2", t.name);
   add("div", fmtDT(new Date(r.createdAt)), "muted");
   const abnBy = {}; (r.abn || []).forEach((a) => { abnBy[a.label] = a; });
@@ -607,7 +621,27 @@ async function openRecord(r) {
     nb.append(nh, ntx); body.appendChild(nb);
   }
   const rm = await memosOf(r.id);
-  if (rm.length) { add("h3", "メモ・連絡", "cat").style.display = "block"; rm.forEach((m) => body.appendChild(memoBlock(m))); }
+  const mh = add("h3", "メモ・連絡", "cat"); mh.style.display = "block";
+  rm.forEach((m) => body.appendChild(memoBlock(m, async () => { await openRecord(r, { memo: true }); renderList(); })));
+  // この記録に紐づくメモを書く欄
+  const mw = document.createElement("div"); mw.className = "memoWrite";
+  const kr = document.createElement("div"); kr.className = "row"; kr.style.marginBottom = "8px";
+  const mkRadio = (val, txt, on) => { const l = document.createElement("label"); const i = document.createElement("input"); i.type = "radio"; i.name = "recMemoKind"; i.value = val; i.checked = on; l.append(i, document.createTextNode(" " + txt)); kr.appendChild(l); };
+  mkRadio("memo", "メモ", true); mkRadio("contact", "連絡（申し送り・対応が必要）", false);
+  const ta = document.createElement("textarea"); ta.placeholder = "この記録についてのメモや連絡を書く";
+  const mr = document.createElement("div"); mr.className = "row"; mr.style.marginTop = "8px";
+  const mbtn = document.createElement("button"); mbtn.type = "button"; mbtn.textContent = "メモを追加";
+  const mmsg = document.createElement("span"); mmsg.className = "muted"; mmsg.setAttribute("role", "status");
+  mbtn.onclick = async () => {
+    const text = ta.value.trim();
+    if (!text) { mmsg.textContent = "内容を書いてください"; mmsg.className = "err"; return; }
+    const kind = mw.querySelector('input[name="recMemoKind"]:checked').value;
+    const m = { id: uid(), kind, text, recordId: r.id, done: false, createdAt: new Date().toISOString() };
+    try { await tx(["memos"], "readwrite", (t) => t.objectStore("memos").put(m)); } catch (e) { mmsg.textContent = "保存できませんでした（端末の空き容量を確認してください）"; mmsg.className = "err"; return; }
+    await openRecord(r, { memo: true }); renderList();
+  };
+  mr.append(mbtn, mmsg); mw.append(kr, ta, mr); body.appendChild(mw);
+  memoAnchor = mw; memoTa = ta;
   const photos = await tx(["photos"], "readonly", (tt) => tt.objectStore("photos").index("recordId").getAll(r.id));
   if (photos.length) {
     add("h3", "写真 " + photos.length + "枚", "cat").style.display = "block";
@@ -635,7 +669,7 @@ async function openRecord(r) {
     }),
     mkBtn("メールで送る", async () => {
       // ファイルは勝手にダウンロードしない。メールの画面だけを開く（添付は必要なら「CSV」「PDF」を先に保存）
-      const sub = encodeURIComponent(t.name + " " + fmtDT(new Date(r.createdAt)));
+      const sub = encodeURIComponent(t.name + (r.property ? " " + r.property : "") + " " + fmtDT(new Date(r.createdAt)));
       const bodyTxt = encodeURIComponent(buildSummary(r, t, rm).slice(0, 1500));
       outMsg.textContent = "メールの画面を開きます。開かない場合は右の「本文をコピー」を使ってください。";
       location.href = "mailto:?subject=" + sub + "&body=" + bodyTxt;
@@ -665,6 +699,7 @@ async function openRecord(r) {
   };
   delRow.append(delBtn, delNote); body.appendChild(delRow);
   show("view"); window.scrollTo(0, 0);
+  if (opts && opts.memo && memoAnchor) { memoAnchor.scrollIntoView(); if (opts.focus) memoTa.focus(); }
 }
 // ---------- 管理者設定（パスワードの設定・変更） ----------
 function renderAdmin(doneMsg) {
@@ -751,17 +786,38 @@ async function renderList() {
   const recs = await tx(["records"], "readonly", (t) => t.objectStore("records").getAll());
   recs.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const box = $("list"); box.innerHTML = "";
-  if (!recs.length) { box.innerHTML = '<div class="empty">まだ記録がありません。上のボタンから最初の記録を作ってください。</div>'; return; }
-  for (const r of recs) {
+  const memosAll = await tx(["memos"], "readonly", (t) => t.objectStore("memos").getAll());
+  const items = recs.map((r) => ({ r, at: r.createdAt })).concat(memosAll.filter((m) => !m.recordId).map((m) => ({ m, at: m.createdAt })));
+  items.sort((x, y) => y.at.localeCompare(x.at));
+  if (!items.length) { box.innerHTML = '<div class="empty">まだ記録がありません。上のボタンから最初の記録を作ってください。</div>'; return; }
+  for (const it of items) {
+    if (it.m) {
+      const mc = document.createElement("div"); mc.className = "card";
+      mc.appendChild(memoBlock(it.m, async () => { await renderList(); }));
+      mc.lastChild.style.marginBottom = "0";
+      box.appendChild(mc); continue;
+    }
+    const r = it.r;
     const t = TEMPLATES[r.template] || { name: r.template, items: [] };
     const done = r.checks.filter(Boolean).length;
     const d = new Date(r.createdAt);
     const card = document.createElement("div"); card.className = "card";
-    card.innerHTML = `<div class="rechead"><span><strong>${t.name}</strong> <span class="muted">${fmtDT(d)}</span></span><span class="recBtns"><button class="memoBtn sub" type="button">メモを<br>書く</button><button class="viewBtn" type="button">記録を<br>確認</button></span></div>
-      <div>チェック ${done}/${r.checks.length}　写真 ${r.photoCount}枚</div>
-      ${r.abn && r.abn.length ? `<div class="err" data-abn></div>` : ""}
+    card.innerHTML = `<div class="rechead"><span><strong>${t.name}</strong> <span class="muted">${fmtDT(d)}</span>　<span class="recCnt">チェック ${done}/${r.checks.length}　写真 ${r.photoCount}枚</span></span><span class="recBtns"><button class="memoBtn sub" type="button">メモを<br>書く</button><button class="viewBtn" type="button">記録を<br>確認</button></span></div>
+      ${r.abn && r.abn.length ? `<div data-abn></div>` : ""}
       <div class="thumbs"></div>`;
-    if (r.abn && r.abn.length) { const open = r.abn.filter((a) => !a.resolved); const ab = card.querySelector("[data-abn]"); if (!open.length) { ab.classList.remove("err"); ab.classList.add("allDone"); } ab.textContent = (open.length ? "要対応 " + open.length + "件" : "すべて対応済み") + "（異常あり " + r.abn.length + "件）：" + r.abn.map((a) => (a.resolved ? "✓" : "") + a.label + (a.note ? "（" + a.note + "）" : "")).join("、"); }
+    if (r.property) { const pl = document.createElement("div"); pl.className = "propLine"; pl.textContent = r.property; card.prepend(pl); }
+    if (r.abn && r.abn.length) {
+      const open = r.abn.filter((a) => !a.resolved);
+      const ab = card.querySelector("[data-abn]");
+      ab.className = "memo abnMemo" + (open.length ? " contact" : " fixedAll");
+      const hd = document.createElement("div");
+      const tg = document.createElement("span"); tg.className = "tag" + (open.length ? " contact" : " ok"); tg.textContent = open.length ? "要対応 " + open.length + "件" : "対応済み";
+      const wh = document.createElement("span"); wh.className = "muted"; wh.textContent = fmtDT(d) + "　異常あり " + r.abn.length + "件";
+      hd.append(tg, wh);
+      const tx2 = document.createElement("div"); tx2.className = "txt";
+      tx2.textContent = r.abn.map((a) => (a.resolved ? "✓ " : "・") + a.label + (a.note ? "（" + a.note + "）" : "") + (a.resolved ? "　対応済み" : "")).join("\n");
+      ab.append(hd, tx2);
+    }
     card.querySelector(".viewBtn").onclick = () => openRecord(r);
     if (r.note) {
       const nb = document.createElement("div"); nb.className = "memo";
@@ -772,7 +828,7 @@ async function renderList() {
     const rmemos = await memosOf(r.id);
     rmemos.forEach((m) => card.appendChild(memoBlock(m)));
     const mb = card.querySelector(".memoBtn");
-    mb.onclick = () => { $("memoLink").value = r.id; $("memoCard").scrollIntoView(); $("memoText").focus(); };
+    mb.onclick = () => openRecord(r, { memo: true, focus: true });
     box.appendChild(card);
     const photos = await tx(["photos"], "readonly", (tt) => tt.objectStore("photos").index("recordId").getAll(r.id));
     const th = card.querySelector(".thumbs");
@@ -782,54 +838,14 @@ async function renderList() {
 }
 
 // ---------- メモ・連絡（記録に紐付けても、単独でも書ける） ----------
-const recLabel = (r) => (TEMPLATES[r.template] ? TEMPLATES[r.template].name : r.template) + " " + fmtDT(new Date(r.createdAt));
-async function renderMemos() {
-  const recs = await tx(["records"], "readonly", (t) => t.objectStore("records").getAll());
-  recs.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  const memos = await tx(["memos"], "readonly", (t) => t.objectStore("memos").getAll());
-  // 紐付け先の選択肢（選択中の値は保つ）
-  const sel = $("memoLink"), keep = sel.value;
-  sel.innerHTML = "";
-  const none = document.createElement("option"); none.value = ""; none.textContent = "（紐付けない）"; sel.appendChild(none);
-  recs.forEach((r) => { const o = document.createElement("option"); o.value = r.id; o.textContent = recLabel(r); sel.appendChild(o); });
-  sel.value = keep;
-  // 未対応の連絡を先頭、次に新しい順
-  const rank = (m) => (m.kind === "contact" && !m.done) ? 0 : 1;
-  memos.sort((a, b) => rank(a) - rank(b) || b.createdAt.localeCompare(a.createdAt));
-  await renderList();
-  const box = $("memoList"); box.innerHTML = "";
-  if (!memos.length) { box.innerHTML = '<div class="empty">まだメモ・連絡がありません。</div>'; return; }
-  const byId = {}; recs.forEach((r) => { byId[r.id] = r; });
-  memos.forEach((m) => {
-    const d = document.createElement("div");
-    d.className = "memo" + (m.kind === "contact" ? " contact" : "") + (m.done ? " done" : "");
-    const head = document.createElement("div");
-    const tag = document.createElement("span"); tag.className = "tag" + (m.kind === "contact" ? " contact" : "");
-    tag.textContent = m.kind === "contact" ? (m.done ? "連絡・対応済み" : "連絡・未対応") : "メモ";
-    const when = document.createElement("span"); when.className = "muted";
-    when.textContent = fmtDT(new Date(m.createdAt)) + (m.recordId ? "　記録: " + (byId[m.recordId] ? recLabel(byId[m.recordId]) : "（削除された記録）") : "");
-    head.append(tag, when);
-    const txt = document.createElement("div"); txt.className = "txt"; txt.textContent = m.text;
-    const row = document.createElement("div"); row.className = "row";
-    if (m.kind === "contact") {
-      const b = document.createElement("button"); b.className = "sub"; b.style.minHeight = "44px";
-      b.textContent = m.done ? "未対応に戻す" : "対応済みにする";
-      b.onclick = async () => { m.done = !m.done; await tx(["memos"], "readwrite", (t) => t.objectStore("memos").put(m)); await renderMemos(); };
-      row.appendChild(b);
-    }
-    const x = document.createElement("button"); x.className = "sub"; x.style.minHeight = "44px"; x.textContent = "削除";
-    x.onclick = async () => { if (!confirm("このメモを削除しますか？（元に戻せません）")) return; await tx(["memos"], "readwrite", (t) => t.objectStore("memos").delete(m.id)); await renderMemos(); };
-    row.appendChild(x);
-    d.append(head, txt, row);
-    box.appendChild(d);
-  });
-}
+const recLabel = (r) => (TEMPLATES[r.template] ? TEMPLATES[r.template].name : r.template) + (r.property ? " " + r.property : "") + " " + fmtDT(new Date(r.createdAt));
+async function renderMemos() { await renderList(); }
 $("memoAdd").onclick = async () => {
   const text = $("memoText").value.trim();
   const msg = $("memoMsg");
   if (!text) { msg.textContent = "内容を書いてください"; msg.className = "err"; return; }
   const kind = document.querySelector('input[name="memoKind"]:checked').value;
-  const m = { id: uid(), kind, text, recordId: $("memoLink").value || "", done: false, createdAt: new Date().toISOString() };
+  const m = { id: uid(), kind, text, recordId: "", done: false, createdAt: new Date().toISOString() };
   try {
     await tx(["memos"], "readwrite", (t) => t.objectStore("memos").put(m));
     $("memoText").value = ""; msg.textContent = "追加しました"; msg.className = "muted";
