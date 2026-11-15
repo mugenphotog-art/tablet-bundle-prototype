@@ -143,15 +143,79 @@ function startEdit(key) {
   show("edit");
 }
 
-$("photo").onchange = async (e) => {
-  for (const f of e.target.files) {
+async function addPhotoFiles(files) {
+  for (const f of files) {
     const blob = await shrink(f);
     current.photos.push(blob);
     const img = document.createElement("img"); img.src = URL.createObjectURL(blob);
     $("thumbs").appendChild(img);
   }
-  e.target.value = "";
+}
+$("photo").onchange = async (e) => { await addPhotoFiles(e.target.files); e.target.value = ""; };
+$("camInput").onchange = async (e) => { await addPhotoFiles(e.target.files); e.target.value = ""; };
+
+// ---- 連続撮影：撮影ボタンを押すだけで即保存（確認の操作なし）。閉じるまでカメラは開いたまま ----
+let camStream = null, camShots = 0, camWait = null;
+function closeCamera() {
+  clearTimeout(camWait);
+  if (camStream) { camStream.getTracks().forEach((t) => t.stop()); camStream = null; }
+  $("camVideo").srcObject = null;
+  $("camOverlay").style.display = "none";
+}
+function failCamera(err) {
+  const name = err && err.name ? err.name : "不明";
+  const tip = (name === "NotAllowedError" || name === "SecurityError") ? "カメラの許可がOFFです。アドレスバー左の鍵マーク→権限→カメラを「許可」にしてください。" : (name === "NotReadableError" ? "他のアプリがカメラを使用中です。他のアプリを閉じてください。" : "この端末ではアプリ内カメラが使えません。");
+  $("camMsg").style.display = "block";
+  $("camMsg").textContent = "カメラを起動できませんでした（" + name + "）。" + tip + "下の「標準カメラ」でも撮れます。";
+}
+function openCamera() {
+  $("camOverlay").style.display = "flex";
+  $("camMsg").style.display = "block"; $("camMsg").textContent = "カメラを起動中…（許可の確認が出たら「許可」を押してください）";
+  clearTimeout(camWait);
+  camWait = setTimeout(() => { if (!camStream) $("camMsg").textContent = "カメラから応答がありません。下の「標準カメラ」を押してください。"; }, 8000);
+  if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) {
+    $("camMsg").textContent = "この画面ではアプリ内カメラが使えません。下の「標準カメラ」を押してください。"; return;
+  }
+  const tries = [{ video: { facingMode: { ideal: "environment" } }, audio: false }, { video: true, audio: false }];
+  let lastErr = null;
+  const attempt = (i) => {
+    if (i >= tries.length) { failCamera(lastErr); return; }
+    navigator.mediaDevices.getUserMedia(tries[i]).then((s) => {
+      camStream = s; camShots = 0; $("camCount").textContent = "0 枚撮影";
+      const v = $("camVideo");
+      v.setAttribute("playsinline", ""); v.muted = true; v.srcObject = s;
+      const done = () => { $("camMsg").style.display = "none"; };
+      v.onloadedmetadata = () => { v.play().then(done).catch(done); };
+      v.onplaying = done;
+      v.play().catch(() => {});
+      setTimeout(() => { if (camStream && !v.videoWidth) $("camMsg").textContent = "映像が出ません。下の「標準カメラ」を押してください。"; }, 4000);
+    }).catch((err) => { lastErr = err; attempt(i + 1); });
+  };
+  attempt(0);
+}
+function shoot() {
+  const v = $("camVideo");
+  if (!camStream || !v.videoWidth || !current) return;
+  const c = document.createElement("canvas");
+  c.width = v.videoWidth; c.height = v.videoHeight;
+  c.getContext("2d").drawImage(v, 0, 0);
+  const f = $("camFlash"); f.style.transition = "none"; f.style.opacity = "0.8";
+  requestAnimationFrame(() => { f.style.transition = "opacity .25s"; f.style.opacity = "0"; });
+  c.toBlob((b) => {
+    if (!b) return;
+    addPhotoFiles([new File([b], "camera-" + Date.now() + ".jpg", { type: "image/jpeg" })]);
+    camShots++; $("camCount").textContent = camShots + " 枚撮影";
+  }, "image/jpeg", 0.92);
+}
+$("camBtn").onclick = () => {
+  $("camOverlay").style.display = "flex";
+  $("camMsg").style.display = "block"; $("camMsg").textContent = "カメラを起動中…";
+  requestAnimationFrame(() => setTimeout(() => { try { openCamera(); } catch (e) { $("camMsg").textContent = "エラー: " + (e && e.message); } }, 150));
 };
+$("camShot").onclick = shoot;
+$("camClose").onclick = closeCamera;
+$("camNative").onclick = () => { closeCamera(); $("camInput").click(); };
+
 
 $("save").onclick = async () => {
   if (saving) return; // 連打による二重登録を防ぐ
@@ -171,7 +235,13 @@ $("save").onclick = async () => {
     setMsg("保存できませんでした（端末の空き容量が足りない可能性があります）。写真を減らして、もう一度保存してください。", true);
   }
 };
-$("cancel").onclick = () => { current = null; show("home"); };
+function backToMenu() {
+  const dirty = current && (current.checks.some(Boolean) || current.abn.some(Boolean) || current.abnNote.some((s) => s) || current.photos.length || $("note").value.trim());
+  if (dirty && !confirm("入力した内容は保存されません。メニューに戻りますか？")) return;
+  closeCamera(); current = null; show("home"); window.scrollTo(0, 0);
+}
+$("cancel").onclick = backToMenu;
+$("backTop").onclick = backToMenu;
 
 async function renderList() {
   const recs = await tx(["records"], "readonly", (t) => t.objectStore("records").getAll());

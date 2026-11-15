@@ -87,13 +87,16 @@
   </section>
 
   <section id="edit" hidden>
+    <div class="row" style="margin-bottom:10px"><button id="backTop" class="sub">← メニューへ戻る</button></div>
     <div class="card">
       <h2 id="editTitle"></h2>
       <div id="items"></div>
       <h2 style="margin-top:14px">写真</h2>
       <div class="row">
-        <label class="btn sub" for="photo">写真を撮る・選ぶ</label>
-        <input id="photo" type="file" accept="image/*" capture="environment" multiple hidden>
+        <button type="button" id="camBtn">📷 カメラで撮影</button>
+        <label class="btn sub" for="photo">写真を選ぶ</label>
+        <input id="photo" type="file" accept="image/*" multiple hidden>
+        <input id="camInput" type="file" accept="image/*" capture="environment" hidden>
       </div>
       <div class="thumbs" id="thumbs"></div>
       <h2 style="margin-top:14px">備考</h2>
@@ -101,11 +104,22 @@
     </div>
     <div class="row">
       <button id="save">保存する</button>
-      <button id="cancel" class="sub">戻る</button>
+      <button id="cancel" class="sub">← メニューへ戻る</button>
       <span id="msg" class="muted" role="status"></span>
     </div>
   </section>
 </main>
+<!-- 連続撮影カメラ（撮影ボタン1回で保存。確認の操作なし） -->
+<div id="camOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;z-index:100;background:#000;flex-direction:column;">
+  <video id="camVideo" playsinline muted autoplay style="flex:1 1 auto;min-height:0;width:100%;object-fit:contain;background:#000;"></video>
+  <div id="camMsg" style="display:none;position:absolute;left:16px;right:16px;top:30%;padding:14px;background:rgba(0,0,0,.75);color:#fff;border-radius:8px;font-size:16px;line-height:1.6;text-align:center;z-index:2;"></div>
+  <div id="camFlash" style="position:absolute;top:0;left:0;right:0;bottom:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s;"></div>
+  <div style="flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 12px;background:#111;color:#fff;">
+    <div style="display:flex;flex-direction:row;gap:6px;flex:1 1 0;"><button class="sub" type="button" id="camClose" style="padding:6px 10px;font-size:13px;min-height:0;white-space:nowrap;">閉じる</button><button class="sub" type="button" id="camNative" style="padding:6px 10px;font-size:13px;min-height:0;white-space:nowrap;">標準カメラ</button></div>
+    <button type="button" id="camShot" aria-label="撮影" style="width:54px;height:54px;min-height:0;padding:0;border-radius:50%;border:4px solid #fff;background:#e53935;cursor:pointer;flex:0 0 auto;"></button>
+    <div id="camCount" style="flex:1 1 0;text-align:right;font-size:14px;font-weight:700;">0 枚撮影</div>
+  </div>
+</div>
 <script src="app.js"></script>
 </body>
 </html>
