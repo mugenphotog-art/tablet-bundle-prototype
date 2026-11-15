@@ -173,6 +173,12 @@ function setMsg(text, isErr) { const m = $("msg"); m.textContent = text; m.class
 // 「新しい記録を作る」のボタンは、ドラッグで並べ替えられる（並びはこの端末に保存）
 function loadOrder() { try { return JSON.parse(localStorage.getItem("tb-template-order") || "[]"); } catch (e) { return []; } }
 function saveOrder(keys) { try { localStorage.setItem("tb-template-order", JSON.stringify(keys)); } catch (e) {} }
+// 日時の表示：「26/11/15 9:45」（年は下2桁、秒は出さない）
+function fmtDT(d) {
+  const p = (n) => (n < 10 ? "0" : "") + n;
+  return String(d.getFullYear()).slice(-2) + "/" + (d.getMonth() + 1) + "/" + d.getDate() + " " + d.getHours() + ":" + p(d.getMinutes());
+}
+
 function renderTemplates() {
   const box = $("templates");
   box.innerHTML = "";
@@ -393,7 +399,7 @@ function memoBlock(m) {
   d.className = "memo" + (m.kind === "contact" ? " contact" : "") + (m.done ? " done" : "");
   const tag = document.createElement("span"); tag.className = "tag" + (m.kind === "contact" ? " contact" : "");
   tag.textContent = m.kind === "contact" ? (m.done ? "連絡・対応済み" : "連絡・未対応") : "メモ";
-  const when = document.createElement("span"); when.className = "muted"; when.textContent = new Date(m.createdAt).toLocaleString("ja-JP");
+  const when = document.createElement("span"); when.className = "muted"; when.textContent = fmtDT(new Date(m.createdAt));
   const txt = document.createElement("div"); txt.className = "txt"; txt.textContent = m.text;
   const head = document.createElement("div"); head.append(tag, when);
   d.append(head, txt);
@@ -409,7 +415,7 @@ async function openRecord(r) {
   const body = $("viewBody"); body.innerHTML = "";
   const add = (tag, text, cls) => { const e = document.createElement(tag); if (cls) e.className = cls; e.textContent = text; body.appendChild(e); return e; };
   add("h2", t.name);
-  add("div", new Date(r.createdAt).toLocaleString("ja-JP"), "muted");
+  add("div", fmtDT(new Date(r.createdAt)), "muted");
   const abnBy = {}; (r.abn || []).forEach((a) => { abnBy[a.label] = a; });
   const abnT = !!t.abnormal;
   const ro = (checked) => { const c = document.createElement("input"); c.type = "checkbox"; c.checked = checked; c.disabled = true; return c; };
@@ -468,7 +474,7 @@ async function renderList() {
     const done = r.checks.filter(Boolean).length;
     const d = new Date(r.createdAt);
     const card = document.createElement("div"); card.className = "card";
-    card.innerHTML = `<div class="rechead"><span><strong>${t.name}</strong> <span class="muted">${d.toLocaleString("ja-JP")}</span></span><button class="viewBtn" type="button">記録を<br>確認</button></div>
+    card.innerHTML = `<div class="rechead"><span><strong>${t.name}</strong> <span class="muted">${fmtDT(d)}</span></span><span class="recBtns"><button class="memoBtn sub" type="button">メモを<br>書く</button><button class="viewBtn" type="button">記録を<br>確認</button></span></div>
       <div>チェック ${done}/${r.checks.length}　写真 ${r.photoCount}枚</div>
       ${r.abn && r.abn.length ? `<div class="err" data-abn></div>` : ""}
       <div class="thumbs"></div>`;
@@ -482,9 +488,8 @@ async function renderList() {
     }
     const rmemos = await memosOf(r.id);
     rmemos.forEach((m) => card.appendChild(memoBlock(m)));
-    const mb = document.createElement("button"); mb.className = "sub"; mb.style.minHeight = "40px"; mb.textContent = "この記録にメモを書く";
+    const mb = card.querySelector(".memoBtn");
     mb.onclick = () => { $("memoLink").value = r.id; $("memoCard").scrollIntoView(); $("memoText").focus(); };
-    card.appendChild(mb);
     box.appendChild(card);
     const photos = await tx(["photos"], "readonly", (tt) => tt.objectStore("photos").index("recordId").getAll(r.id));
     const th = card.querySelector(".thumbs");
@@ -494,7 +499,7 @@ async function renderList() {
 }
 
 // ---------- メモ・連絡（記録に紐付けても、単独でも書ける） ----------
-const recLabel = (r) => (TEMPLATES[r.template] ? TEMPLATES[r.template].name : r.template) + " " + new Date(r.createdAt).toLocaleString("ja-JP");
+const recLabel = (r) => (TEMPLATES[r.template] ? TEMPLATES[r.template].name : r.template) + " " + fmtDT(new Date(r.createdAt));
 async function renderMemos() {
   const recs = await tx(["records"], "readonly", (t) => t.objectStore("records").getAll());
   recs.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -519,7 +524,7 @@ async function renderMemos() {
     const tag = document.createElement("span"); tag.className = "tag" + (m.kind === "contact" ? " contact" : "");
     tag.textContent = m.kind === "contact" ? (m.done ? "連絡・対応済み" : "連絡・未対応") : "メモ";
     const when = document.createElement("span"); when.className = "muted";
-    when.textContent = new Date(m.createdAt).toLocaleString("ja-JP") + (m.recordId ? "　記録: " + (byId[m.recordId] ? recLabel(byId[m.recordId]) : "（削除された記録）") : "");
+    when.textContent = fmtDT(new Date(m.createdAt)) + (m.recordId ? "　記録: " + (byId[m.recordId] ? recLabel(byId[m.recordId]) : "（削除された記録）") : "");
     head.append(tag, when);
     const txt = document.createElement("div"); txt.className = "txt"; txt.textContent = m.text;
     const row = document.createElement("div"); row.className = "row";
