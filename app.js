@@ -483,23 +483,70 @@ function buildSummary(r, t, memos) {
 async function buildReportHtml(r, t, memos, photos) {
   const imgs = [];
   for (const p of photos) imgs.push(await blobToDataUrl(p.blob));
-  let lastCat = "", rowsHtml = "";
-  reportRows(r, t).forEach((x) => {
-    const cat = x[0] + (x[1] ? " / " + x[1] : "");
-    if (cat !== lastCat) { lastCat = cat; rowsHtml += '<tr class="cat"><td colspan="3">' + esc(cat || "項目") + "</td></tr>"; }
-    rowsHtml += "<tr" + (x[4] ? ' class="bad"' : "") + "><td>" + esc(x[2]) + '</td><td class="c">' + x[3] + '</td><td>' + (x[4] ? "異常あり " + esc(x[5]) : "") + "</td></tr>";
+  // アプリの画面と同じ構成：大項目（濃い緑の帯）→ 中項目（少し右から・左線）→ 個別の項目（さらに右から）
+  const abnT = !!t.abnormal, rows = reportRows(r, t);
+  const hasSub = rows.some((x) => x[1]);
+  const box = (on, warn) => '<span class="bx' + (on ? " on" : "") + (warn ? " w" : "") + '">' + (on ? "✓" : "") + "</span>";
+  let lastCat = null, lastSub = null, rowsHtml = "";
+  if (!abnT) rowsHtml = "";
+  rows.forEach((x) => {
+    if (x[0] && x[0] !== lastCat) {
+      lastCat = x[0]; lastSub = null;
+      rowsHtml += '<div class="g cat"><span>' + esc(x[0]) + "</span>" + (abnT ? '<span class="c">異常あり</span><span>内容</span>' : "") + "</div>";
+    }
+    if (x[1] && x[1] !== lastSub) { lastSub = x[1]; rowsHtml += '<div class="sub">' + esc(x[1]) + "</div>"; }
+    const ind = hasSub ? " in2" : (x[0] ? " in1" : "");
+    if (abnT) rowsHtml += '<div class="g row' + (x[4] ? " bad" : "") + '"><span class="lab' + ind + '">' + box(x[3]) + esc(x[2]) + '</span><span class="c">' + box(x[4], true) + "</span><span class=\"nt\">" + esc(x[5]) + "</span></div>";
+    else rowsHtml += '<div class="row1"><span class="lab">' + box(x[3]) + esc(x[2]) + "</span></div>";
   });
   let memoHtml = "";
   if (r.note) memoHtml += "<p><b>メモ：</b>" + esc(r.note) + "</p>";
   memos.forEach((m) => { memoHtml += "<p><b>" + (m.kind === "contact" ? "連絡" : "メモ") + "（" + fmtDT(new Date(m.createdAt)) + "）：</b>" + esc(m.text) + "</p>"; });
+  // A4（96dpi換算 794x1123px）に区切り、右上に「n / 全ページ数」を入れる
+  const PW_FULL = 794, PH = 1123, PAD_X = 36, PAD_T = 44, PAD_B = 36, PW = PW_FULL - PAD_X * 2;
+  let prows = "";
+  for (let i = 0; i < imgs.length; i += 2) prows += '<div class="prow">' + imgs.slice(i, i + 2).map((u) => '<img src="' + u + '">').join("") + "</div>";
+  const PAGER = '(function(){var AV=' + (PH - PAD_T - PAD_B) + ';function hh(e){var s=getComputedStyle(e);return e.offsetHeight+parseFloat(s.marginTop)+parseFloat(s.marginBottom);}' +
+    'function hd(e){return /(^| )(cat|sub)( |$)/.test(e.className)||e.tagName==="H3";}' +
+    'function go(){var src=document.getElementById("src"),items=[].slice.call(src.children),pages=[],cur=[],h=0;' +
+    'items.forEach(function(e){var eh=hh(e);' +
+    'if(cur.length&&h+eh>AV){var carry=[];while(cur.length>1&&hd(cur[cur.length-1])){carry.unshift(cur.pop());}pages.push(cur);cur=carry;h=0;cur.forEach(function(c){h+=hh(c);});}' +
+    'cur.push(e);h+=eh;});if(cur.length)pages.push(cur);' +
+    'pages.forEach(function(p,i){var d=document.createElement("div");d.className="pg";var n=document.createElement("div");n.className="pn";n.textContent=(i+1)+" / "+pages.length;d.appendChild(n);p.forEach(function(e){d.appendChild(e);});document.body.insertBefore(d,src);});src.parentNode.removeChild(src);}' +
+    'var im=[].slice.call(document.images),left=im.length;if(!left){go();}else{im.forEach(function(i){function f(){if(--left===0)go();}if(i.complete)f();else{i.onload=f;i.onerror=f;}});}})();';
   return '<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(t.name) + '</title><style>' +
-    'body{font-family:sans-serif;margin:16px;color:#222}h1{font-size:1.4em;margin:0}table{border-collapse:collapse;width:100%;margin-top:10px}td{border:1px solid #999;padding:4px 6px;font-size:.9em}' +
-    'tr.cat td{background:#e4e8e6;font-weight:bold}tr.bad td{background:#fde8e8}td.c{text-align:center;width:3em}.ph img{width:48%;margin:1%;break-inside:avoid}@media print{.np{display:none}}' +
-    '</style></head><body><h1>' + esc(t.name) + '</h1><div>' + esc(fmtDT(new Date(r.createdAt))) + '</div>' +
-    '<p class="np">印刷画面で「送信先：PDFに保存」を選んでください。<button onclick="window.print()">印刷／PDF保存</button></p>' +
-    '<table>' + rowsHtml + '</table>' + memoHtml +
-    (imgs.length ? '<h3>写真 ' + imgs.length + '枚</h3><div class="ph">' + imgs.map((u) => '<img src="' + u + '">').join("") + "</div>" : "") +
-    '<script>setTimeout(function(){window.print()},700)<\/script></body></html>';
+    '*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:sans-serif;color:#1c2421;font-size:14px}h1{font-size:1.4em;margin:0}.muted{color:#5b6762}' +
+    '.g{display:grid;grid-template-columns:minmax(0,1fr) 64px minmax(130px,1fr);gap:0 10px;align-items:center}' +
+    '.cat{margin:14px 0 2px;padding:6px 10px;background:#14503f;border-radius:6px;color:#fff;font-weight:700;break-after:avoid}.cat .c{text-align:center;font-size:.85em}.cat span:last-child{font-size:.85em;font-weight:400}' +
+    '.sub{margin:10px 0 0 28px;padding:2px 8px;font-size:.95em;color:#3c4a45;border-left:4px solid #1f6f5c;background:#f1f5f3;break-after:avoid}' +
+    '.row,.row1{border-bottom:1px solid #d5dcd9;min-height:30px;break-inside:avoid}.row.bad{background:#fff4e8}.lab{display:flex;align-items:center;gap:10px;padding:4px 0}.lab.in1{padding-left:28px}.lab.in2{padding-left:56px}' +
+    '.c{text-align:center}.nt{color:#b4540a;font-size:.9em;word-break:break-all}' +
+    '.bx{display:inline-block;flex:0 0 18px;width:18px;height:18px;border:2px solid #8a9690;border-radius:4px;text-align:center;line-height:18px;font-size:14px;font-weight:700;color:#fff;background:#fff;vertical-align:middle}.bx.on{background:#1f6f5c;border-color:#1f6f5c}.bx.w.on{background:#b4540a;border-color:#b4540a}' +
+    'p{margin:8px 0}h3{margin:14px 0 6px}.prow{display:flex;gap:2%;margin-bottom:8px}.prow img{width:49%;height:auto}' +
+    '@page{size:A4;margin:0}html,body{margin:0}body{padding:0;background:#9aa5a0}' +
+    '#src{position:absolute;left:-9999px;top:0;width:' + PW + 'px;visibility:hidden}' +
+    '.pg{position:relative;box-sizing:border-box;width:' + PW_FULL + 'px;height:' + PH + 'px;padding:' + PAD_T + 'px ' + PAD_X + 'px ' + PAD_B + 'px;margin:0 auto 12px;background:#fff;overflow:hidden;page-break-after:always;break-after:page}' +
+    '.pn{position:absolute;top:16px;right:' + PAD_X + 'px;font-size:12px;color:#5b6762}' +
+    '@media print{body{background:#fff}.pg{margin:0}.pg:last-child{page-break-after:auto;break-after:auto}}' +
+    '</style></head><body><div id="src"><h1>' + esc(t.name) + '</h1><div class="muted">' + esc(fmtDT(new Date(r.createdAt))) + '</div>' +
+    rowsHtml + memoHtml +
+    (imgs.length ? '<h3>写真 ' + imgs.length + '枚</h3>' + prows : "") +
+    '</div><script>' + PAGER + '<\/script></body></html>';
+}
+// 報告書をアプリの上に重ねて表示。「印刷／PDF保存」で端末の印刷画面（PDFに保存できる）を開く
+function showReport(html) {
+  const ov = document.createElement("div");
+  ov.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;z-index:400;background:#fff;display:flex;flex-direction:column;";
+  const bar = document.createElement("div"); bar.className = "row"; bar.style.cssText = "padding:8px;border-bottom:1px solid #ccc;";
+  const pb = document.createElement("button"); pb.type = "button"; pb.textContent = "印刷／PDFに保存";
+  const cb = document.createElement("button"); cb.type = "button"; cb.className = "sub"; cb.textContent = "閉じる";
+  const hint = document.createElement("span"); hint.className = "muted"; hint.textContent = "印刷画面で「PDFに保存」を選びます";
+  bar.append(pb, cb, hint);
+  const fr = document.createElement("iframe"); fr.style.cssText = "flex:1;border:0;width:100%;";
+  fr.srcdoc = html;
+  ov.append(bar, fr); document.body.appendChild(ov);
+  cb.onclick = () => document.body.removeChild(ov);
+  pb.onclick = () => { try { fr.contentWindow.focus(); fr.contentWindow.print(); } catch (e) { hint.className = "err"; hint.textContent = "印刷を開けませんでした：" + e.message; } };
 }
 // ---------- 保存した記録の内容を見る（読み取り専用） ----------
 async function openRecord(r) {
@@ -552,24 +599,29 @@ async function openRecord(r) {
   const baseName = t.name + "_" + fmtDT(new Date(r.createdAt)).replace(/[\/: ]/g, "");
   outRow.append(
     mkBtn("PDFにする（印刷）", async () => {
-      // ボタンを押した直後に画面を開く（後から開くとブロックされるため）。中身は出来てから書き込む
-      const w = window.open("", "_blank");
-      if (!w) { outMsg.className = "err"; outMsg.textContent = "画面を開けませんでした。ポップアップを許可してください。"; return; }
-      try { w.document.write("<p>報告書を作っています…</p>"); } catch (e) {}
+      // 別画面は開かず、このアプリの上に報告書を重ねて表示する（ポップアップに頼らない）
+      outMsg.textContent = "報告書を作っています…";
       const html = await buildReportHtml(r, t, rm, photos);
-      w.document.open(); w.document.write(html); w.document.close();
-      outMsg.textContent = "開いた画面の印刷で「PDFに保存」を選ぶとPDFになります。";
+      showReport(html);
+      outMsg.textContent = "";
     }),
     mkBtn("Excel用ファイル（CSV）", async () => {
       saveBlob(new Blob(["﻿" + buildCsv(r, t, rm)], { type: "text/csv" }), baseName + ".csv");
       outMsg.textContent = "ダウンロードしました（" + baseName + ".csv）。Excelで開けます。写真は入りません。";
     }),
     mkBtn("メールで送る", async () => {
+      // ファイルは勝手にダウンロードしない。メールの画面だけを開く（添付は必要なら「CSV」「PDF」を先に保存）
       const sub = encodeURIComponent(t.name + " " + fmtDT(new Date(r.createdAt)));
       const bodyTxt = encodeURIComponent(buildSummary(r, t, rm).slice(0, 1500));
-      saveBlob(new Blob(["﻿" + buildCsv(r, t, rm)], { type: "text/csv" }), baseName + ".csv");
-      outMsg.textContent = "メールの画面を開きます。CSVをダウンロードしたので、メールに添付してください（PDFは「PDFにする」から）。";
+      outMsg.textContent = "メールの画面を開きます。開かない場合は右の「本文をコピー」を使ってください。";
       location.href = "mailto:?subject=" + sub + "&body=" + bodyTxt;
+    }),
+    mkBtn("本文をコピー", async () => {
+      const ta = document.createElement("textarea"); ta.value = buildSummary(r, t, rm);
+      ta.style.cssText = "position:fixed;top:0;left:0;opacity:0"; document.body.appendChild(ta); ta.focus(); ta.select();
+      let ok = false; try { ok = document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(ta);
+      outMsg.textContent = ok ? "報告の文面をコピーしました。メールアプリなどに貼り付けてください。" : "コピーできませんでした。";
     })
   );
   body.append(outRow, outMsg);
