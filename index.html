@@ -17,6 +17,9 @@
   .badge { font-size:.8em; padding:4px 10px; border-radius:999px; background:#ffffff33; }
   .badge.off { background:var(--warn); }
   main { max-width:760px; margin:0 auto; padding:16px; }
+  #savedCard { background:#e4e8e6; border-color:#b3bdb9; }
+  #list .card { background:#fff; border:1px solid #b3bdb9; margin-bottom:14px; }
+  #list .card:last-child { margin-bottom:0; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px; }
   button, .btn { font:inherit; min-height:52px; min-width:52px; padding:10px 18px; border-radius:10px; border:1px solid var(--accent); background:var(--accent); color:#fff; cursor:pointer; }
   button.sub { background:#fff; color:var(--accent); }
@@ -70,7 +73,7 @@
       <h2>新しい記録を作る</h2>
       <div class="row" id="templates"></div>
     </div>
-    <div class="card">
+    <div class="card" id="savedCard">
       <h2>保存した記録</h2>
       <div id="list"></div>
     </div>
